@@ -71,6 +71,7 @@ onMounted(async () => {
       store.value = { name: storeDoc.data().name }
     } else {
       console.error('Store not found!')
+      alert('店舗情報が見つかりませんでした。')
       router.push('/dashboard')
     }
 
