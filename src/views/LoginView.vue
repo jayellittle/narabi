@@ -57,7 +57,7 @@ const handleSignUp = async () => {
     if (isAuthError(error)) {
       errorMessage.value = getErrorMessage(error.code)
     } else {
-      errorMessage.value = '알 수 없는 오류가 발생했습니다.'
+      errorMessage.value = 'エラーが発生しました。'
     }
   }
 }
@@ -70,7 +70,7 @@ const handleSignIn = async () => {
     if (isAuthError(error)) {
       errorMessage.value = getErrorMessage(error.code)
     } else {
-      errorMessage.value = '알 수 없는 오류가 발생했습니다.'
+      errorMessage.value = 'エラーが発生しました。'
     }
   }
 }
@@ -78,21 +78,21 @@ const handleSignIn = async () => {
 const getErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
     case 'auth/invalid-email':
-      return '유효하지 않은 이메일 주소입니다.'
+      return '無効なメールアドレスです。'
     case 'auth/user-not-found':
-      return '가입되지 않은 이메일입니다.'
+      return '登録されていないメールアドレスです。'
     case 'auth/wrong-password':
-      return '비밀번호가 틀렸습니다.'
+      return 'パスワードが間違っています。'
     case 'auth/email-already-in-use':
-      return '이미 사용 중인 이메일입니다.'
+      return '既に登録されているメールアドレスです。'
     case 'auth/weak-password':
-      return '비밀번호는 6자 이상이어야 합니다.'
+      return 'パスワードは６文字以上で設定してください。'
     case 'auth/invalid-credential':
-      return '이메일 또는 비밀번호가 잘못되었습니다.'
+      return 'メールアドレスまたはパスワードが間違っています。'
     case 'auth/too-many-requests':
-      return '너무 많은 시도로 인해 일시적으로 차단되었습니다.'
+      return 'リクエスト過多により一時的にアクセスがブロックされています。'
     default:
-      return '오류가 발생했습니다. 잠시 후 다시 시도해주세요.'
+      return 'エラーが発生しました。後ほど再度お試しください。'
   }
 }
 </script>
