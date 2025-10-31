@@ -47,6 +47,15 @@ import {
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import QrcodeVue from 'qrcode.vue'
 
+interface Store {
+  name: string
+  address: string
+  phoneNumber: string
+  googleMapsUrl?: string
+  ownerId: string
+  createdAt: Date
+}
+
 interface Customer {
   id: string
   displayName: string
@@ -58,7 +67,7 @@ const route = useRoute()
 const router = useRouter()
 const storeId = route.params.storeId as string
 
-const store = ref<{ name: string } | null>(null)
+const store = ref<Store | null>(null)
 const waitingUrl = ref('')
 const waitingList = ref<Customer[]>([])
 
@@ -67,8 +76,17 @@ onMounted(async () => {
     // 1. 가게 기본 정보(이름 등) 불러오기
     const storeDocRef = doc(db, 'stores', storeId)
     const storeDoc = await getDoc(storeDocRef)
+
     if (storeDoc.exists()) {
-      store.value = { name: storeDoc.data().name }
+      const data = storeDoc.data()
+      store.value = {
+        name: data.name,
+        address: data.address,
+        phoneNumber: data.phoneNumber,
+        googleMapsUrl: data.googleMapsUrl,
+        ownerId: data.ownerId,
+        createdAt: data.createdAt?.toDate() || new Date(),
+      }
     } else {
       console.error('Store not found!')
       alert('店舗情報が見つかりませんでした。')
