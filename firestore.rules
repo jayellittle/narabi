@@ -13,5 +13,7 @@ service cloud.firestore {
             allow create: if true;
             allow update: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
             allow delete: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
+        }
+    }
   }
 }

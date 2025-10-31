@@ -89,6 +89,42 @@ export const registerWaitlist = functions
         throw new Error(JSON.stringify(lineProfile))
       }
 
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
+      const recentRegistrations = await db
+        .collection('stores')
+        .doc(storeId)
+        .collection('waitingList')
+        .where('lineUserId', '==', lineProfile.userId)
+        .where('createdAt', '>', fiveMinutesAgo)
+        .get()
+
+      if (!recentRegistrations.empty) {
+        logger.warn('중복 등록 시도:', {
+          lineUserId: lineProfile.userId,
+          storeId: storeId,
+        })
+        throw new functions.https.HttpsError('already-exists', '既に登録されています。')
+      }
+
+      const existingWaiting = await db
+        .collection('stores')
+        .doc(storeId)
+        .collection('waitingList')
+        .where('lineUserId', '==', lineProfile.userId)
+        .where('status', '==', 'waiting')
+        .get()
+
+      if (!existingWaiting.empty) {
+        logger.warn('이미 대기 중인 사용자:', {
+          lineUserId: lineProfile.userId,
+          storeId: storeId,
+        })
+        throw new functions.https.HttpsError(
+          'already-exists',
+          '既に順番待ちリストに登録されています。',
+        )
+      }
+
       await db.collection('stores').doc(storeId).collection('waitingList').add({
         lineUserId: lineProfile.userId,
         displayName: lineProfile.displayName,
@@ -97,8 +133,18 @@ export const registerWaitlist = functions
         createdAt: FieldValue.serverTimestamp(),
       })
 
+      logger.info('대기 등록 완료:', {
+        lineUserId: lineProfile.userId,
+        displayName: lineProfile.displayName,
+        storeId: storeId,
+      })
+
       return { success: true }
     } catch (error: unknown) {
+      if (error instanceof functions.https.HttpsError) {
+        throw error
+      }
+
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error('LINE 인증 실패', errorMessage)
       throw new functions.https.HttpsError('internal', 'LINE認証に失敗しました。')

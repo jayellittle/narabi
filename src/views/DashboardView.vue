@@ -28,7 +28,15 @@
 
       <div class="form-group">
         <label>電話番号 *</label>
-        <input v-model="newStore.phoneNumber" type="tel" placeholder="店舗の電話番号" required />
+        <input
+          v-model="newStore.phoneNumber"
+          type="tel"
+          placeholder="店舗の電話番号"
+          required
+          :class="{ 'input-error': phoneError }"
+          @blur="validatePhoneNumberBlur"
+        />
+        <span v-if="phoneError" class="error-text">{{ phoneError }}</span>
       </div>
 
       <div class="form-group">
@@ -36,8 +44,11 @@
         <input
           v-model="newStore.googleMapsUrl"
           type="url"
-          placeholder="例: https://maps.google.com/..."
+          placeholder="例： https://maps.google.com/..."
+          :class="{ 'input-error': urlError }"
+          @blur="validateUrlBlur"
         />
+        <span v-if="urlError" class="error-text">{{ urlError }}</span>
       </div>
 
       <button @click="createStore" :disabled="!canCreateStore">追加</button>
@@ -48,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { getFirestore, collection, addDoc, query, where, onSnapshot } from 'firebase/firestore'
 import { getAuth, signOut } from 'firebase/auth'
 import { useRouter } from 'vue-router'
@@ -77,11 +88,82 @@ const newStore = ref<NewStore>({
   googleMapsUrl: '',
 })
 
+const phoneError = ref('')
+const urlError = ref('')
+
+const validatePhoneNumber = (phone: string): boolean => {
+  const phoneRegex = /^[0-9]{2,4}-[0-9]{2,4}-[0-9]{4}$/
+  return phoneRegex.test(phone)
+}
+
+const validateUrl = (url: string): boolean => {
+  if (!url) return true
+  try {
+    new URL(url)
+    return url.startsWith('http://') || url.startsWith('https://')
+  } catch {
+    return false
+  }
+}
+
+const validatePhoneNumberBlur = () => {
+  if (!newStore.value.phoneNumber) {
+    phoneError.value = ''
+    return
+  }
+  if (!validatePhoneNumber(newStore.value.phoneNumber)) {
+    phoneError.value = '電話番号の形式が正しくありません。（例：03-1234-5678）'
+  } else {
+    phoneError.value = ''
+  }
+}
+
+const validateUrlBlur = () => {
+  if (!newStore.value.googleMapsUrl) {
+    urlError.value = ''
+    return
+  }
+  if (!validateUrl(newStore.value.googleMapsUrl)) {
+    urlError.value = '有効なURLを入力してください。'
+  } else {
+    urlError.value = ''
+  }
+}
+
 const canCreateStore = computed(() => {
-  return (
+  const hasRequiredFields =
     newStore.value.name.trim() && newStore.value.address.trim() && newStore.value.phoneNumber.trim()
-  )
+
+  if (!hasRequiredFields) return false
+
+  if (!validatePhoneNumber(newStore.value.phoneNumber)) {
+    return false
+  }
+
+  if (newStore.value.googleMapsUrl && !validateUrl(newStore.value.googleMapsUrl)) {
+    return false
+  }
+
+  return true
 })
+
+watch(
+  () => newStore.value.phoneNumber,
+  () => {
+    if (phoneError.value) {
+      phoneError.value = ''
+    }
+  },
+)
+
+watch(
+  () => newStore.value.googleMapsUrl,
+  () => {
+    if (urlError.value) {
+      urlError.value = ''
+    }
+  },
+)
 
 onMounted(() => {
   const user = auth.currentUser
@@ -163,6 +245,17 @@ const handleSignOut = async () => {
   border: 1px solid #ccc;
   border-radius: 4px;
   box-sizing: border-box;
+}
+
+.input-error {
+  border-color: #ff4444 !important;
+}
+
+.error-text {
+  display: block;
+  color: #ff4444;
+  font-size: 12px;
+  margin-top: 4px;
 }
 
 button:disabled {
