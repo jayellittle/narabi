@@ -5,14 +5,19 @@ service cloud.firestore {
 
     match /stores/{storeId} {
         allow read: if true;    // 누구나 가게 정보 조회 가능
-        allow create: if request.auth != null;
-        allow update, delete: if request.auth != null && request.auth.uid == resource.data.ownerId;
+        allow create: if request.auth != null &&
+                      request.resource.data.ownerId == request.auth.uid;
+        allow update, delete: if request.auth != null &&
+                      request.auth.uid == resource.data.ownerId;
 
         match /waitingList/{customerId} {
-            allow read: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
+            allow read: if request.auth != null &&
+                        request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
             allow create: if true;
-            allow update: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
-            allow delete: if request.auth != null && request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
+            allow update: if request.auth != null &&
+                        request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
+            allow delete: if request.auth != null &&
+                        request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId;
         }
     }
   }
