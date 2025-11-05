@@ -1,6 +1,10 @@
 <template>
+  <div class="logo-container">
+    <img src="/logo-rect.png" alt="App Logo" class="app-logo" />
+    <h3 class="logo-text">管理者ホーム</h3>
+  </div>
   <div class="login-container">
-    <h2>{{ isSignUp ? '会員登録' : 'ログイン' }}</h2>
+    <h2 class="login-title">{{ isSignUp ? '会員登録' : 'ログイン' }}</h2>
     <div class="form-group">
       <input type="email" v-model="email" placeholder="メールアドレス" />
     </div>
@@ -16,16 +20,16 @@
     <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
 
     <div v-if="isSignUp">
-      <button @click="handleSignUp">会員登録</button>
+      <button @click="handleSignUp" class="main-button">会員登録</button>
       <p>
-        登録済みのアカウントをお持ちですか？
-        <a @click.prevent="isSignUp = false" href="#">ログイン</a>
+        アカウントを登録済み　
+        <button @click.prevent="isSignUp = false" href="#">ログイン</button>
       </p>
     </div>
     <div v-else>
-      <button @click="handleSignIn">ログイン</button>
+      <button @click="handleSignIn" class="main-button">ログイン</button>
       <p>
-        アカウントをお持ちではないですか？ <a @click.prevent="isSignUp = true" href="#">会員登録</a>
+        新しいアカウントを作る　<button @click.prevent="isSignUp = true" href="#">会員登録</button>
       </p>
     </div>
   </div>
@@ -100,20 +104,35 @@ const getErrorMessage = (errorCode: string): string => {
 <style scoped>
 .login-container {
   max-width: 400px;
-  margin: 50px auto;
   padding: 20px;
   border: 1px solid #ccc;
   border-radius: 8px;
+  margin: 0 auto;
+}
+.logo-container {
+  text-align: center;
+  margin-bottom: 30px;
+}
+.app-logo {
+  width: 240px;
+  object-fit: contain;
+  margin-bottom: 2px;
+}
+.logo-text {
+  color: #212758;
+  margin-top: 0;
+  margin-bottom: 0;
+  font-weight: 800;
+  font-size: 18px;
+}
+.login-title {
+  text-align: center;
+  margin-bottom: 20px;
 }
 .form-group {
   margin-bottom: 15px;
 }
-input {
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
-}
-button {
+.main-button {
   width: 100%;
   padding: 10px;
   background-color: #007bff;
@@ -122,6 +141,11 @@ button {
   border-radius: 4px;
   cursor: pointer;
 }
+input {
+  width: 100%;
+  padding: 10px;
+  box-sizing: border-box;
+}
 .error-message {
   color: red;
   margin-bottom: 15px;
@@ -129,6 +153,7 @@ button {
 p {
   margin-top: 15px;
   text-align: center;
+  font-size: 14px;
 }
 a {
   color: #007bff;
