@@ -534,7 +534,7 @@ h1 {
   background-color: #da190b;
 }
 
-/* 반응형 */
+/* 反応形 */
 @media (max-width: 768px) {
   .waiting-list-container {
     padding: 1rem;
@@ -546,27 +546,29 @@ h1 {
   }
 
   .stats {
-    flex-direction: column;
+    gap: 0.5rem;
   }
 
   .stat-card {
-    padding: 1.25rem;
+    padding: 1rem;
   }
 
   .stat-value {
-    font-size: 2rem;
+    font-size: 1.5rem;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
   }
 
   .filters {
-    flex-direction: column;
     gap: 0.5rem;
-    padding: 0.75rem;
+    padding: 0.5rem;
   }
 
   .filters button {
-    width: 100%;
-    padding: 1rem;
-    font-size: 1rem;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
   }
 
   .customer-card {

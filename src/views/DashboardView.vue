@@ -169,7 +169,7 @@ const loadStores = async () => {
 // 매장 선택
 const selectStore = (storeId: string) => {
   selectedStoreId.value = storeId
-  router.push(`/store/${storeId}/waiting`)
+  router.push(`/store/${storeId}`)
 }
 
 // 로그아웃

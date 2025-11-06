@@ -253,6 +253,13 @@ h1 {
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   margin-bottom: 1rem;
+  max-width: 100%;
+}
+
+.qr-image-wrapper canvas {
+  display: block;
+  max-width: 100%;
+  height: auto !important;
 }
 
 .qr-instruction {
@@ -438,12 +445,6 @@ h1 {
     padding: 0.75rem;
   }
 
-  .qr-image-wrapper canvas {
-    max-width: 100%;
-    height: auto !important;
-    width: 250px !important;
-  }
-
   .info-card {
     padding: 1.25rem;
   }
@@ -484,10 +485,6 @@ h1 {
 @media (max-width: 480px) {
   h1 {
     font-size: 1.3rem;
-  }
-
-  .qr-image-wrapper canvas {
-    width: 200px !important;
   }
 
   .action-button {
