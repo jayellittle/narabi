@@ -124,7 +124,7 @@ const handleJoinStore = async (storeId: string) => {
     const existingRequestQuery = query(
       collection(db, 'storeJoinRequests'),
       where('storeId', '==', storeId),
-      where('userEmail', '==', user.email),
+      where('userId', '==', user.uid),
     )
 
     const existingRequests = await getDocs(existingRequestQuery)
