@@ -43,10 +43,14 @@
     </aside>
 
     <!-- 메인 컨텐츠 -->
-    <main class="main-content" :class="{ 'full-width-mobile': !isMenuPage }">
-      <!-- 모바일 헤더 (서브 페이지에서만 표시) -->
-      <div v-if="!isMenuPage && store" class="mobile-header">
-        <button @click="goToMenu" class="mobile-back-btn">
+    <main class="main-content">
+      <!-- 모바일 헤더 -->
+      <div v-if="store" class="mobile-header">
+        <button v-if="isMenuPage" @click="goBack" class="mobile-back-btn">
+          <span class="back-arrow">←</span>
+          <span class="back-text">戻る</span>
+        </button>
+        <button v-else @click="goToMenu" class="mobile-back-btn">
           <span class="back-arrow">←</span>
           <span class="back-text">メニュー</span>
         </button>
@@ -333,28 +337,19 @@ const goToMenu = () => {
   margin-right: 1rem;
 }
 
-/* 반応형 */
+/* 反応形 */
 @media (max-width: 768px) {
   .store-detail-container {
     flex-direction: column;
   }
 
-  /* モバイルでサブページの場合はサイドバーを非表示 */
-  .sidebar.hide-on-mobile {
-    display: none;
-  }
-
+  /* モバイルでは常にサイドバーを非表示 */
   .sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
+    display: none;
   }
 
   .main-content {
     padding: 0;
-  }
-
-  .main-content.full-width-mobile {
     width: 100%;
   }
 
