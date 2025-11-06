@@ -48,18 +48,18 @@ const storeId = route.params.storeId as string
 /* ウェルカムセクション */
 .welcome-section {
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: 2rem;
 }
 
 .welcome-section h1 {
-  font-size: 2.5rem;
+  font-size: 2rem;
   color: #333;
   margin: 0 0 0.5rem 0;
   font-weight: 700;
 }
 
 .subtitle {
-  font-size: 1.1rem;
+  font-size: 1rem;
   color: #666;
   margin: 0;
 }
@@ -67,9 +67,9 @@ const storeId = route.params.storeId as string
 /* メニューグリッド */
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
 }
 
 /* メニューカード */
@@ -79,7 +79,7 @@ const storeId = route.params.storeId as string
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 2.5rem 2rem;
+  padding: 1.5rem 1.5rem;
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -143,15 +143,15 @@ const storeId = route.params.storeId as string
 
 /* メニューアイコン */
 .menu-icon {
-  font-size: 4rem;
-  margin-bottom: 1rem;
-  width: 100px;
-  height: 100px;
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+  width: 70px;
+  height: 70px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 20px;
+  border-radius: 16px;
   transition: transform 0.3s;
 }
 
@@ -160,23 +160,23 @@ const storeId = route.params.storeId as string
 }
 
 .menu-card h2 {
-  margin: 0 0 0.75rem 0;
-  font-size: 1.5rem;
+  margin: 0 0 0.5rem 0;
+  font-size: 1.25rem;
   color: #333;
   font-weight: 600;
 }
 
 .menu-card p {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
   color: #666;
-  line-height: 1.6;
+  line-height: 1.5;
   flex: 1;
 }
 
 .menu-arrow {
-  margin-top: 1.5rem;
-  font-size: 1.5rem;
+  margin-top: 1rem;
+  font-size: 1.25rem;
   color: #667eea;
   font-weight: bold;
   opacity: 0;
