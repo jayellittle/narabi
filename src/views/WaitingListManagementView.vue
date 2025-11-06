@@ -198,8 +198,70 @@ onMounted(() => {
           <div class="label">番</div>
         </div>
 
-        <!-- 액션 버튼 (맨 위로 이동) -->
-        <div class="customer-actions">
+        <!-- 액션 버튼 (모바일에서만 여기에 표시) -->
+        <div class="customer-actions mobile-actions">
+          <!-- 대기 중 -->
+          <template v-if="customer.status === 'waiting'">
+            <button
+              @click="handleCallCustomer(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn call-btn"
+            >
+              📞 呼出
+            </button>
+            <button
+              @click="handleCancelWaiting(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn cancel-btn"
+            >
+              ❌ 取消
+            </button>
+          </template>
+
+          <!-- 호출됨 -->
+          <template v-else-if="customer.status === 'called'">
+            <button
+              @click="handleCompleteEntry(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn complete-btn"
+            >
+              ✅ 来店完了
+            </button>
+            <button
+              @click="handleCancelWaiting(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn cancel-btn"
+            >
+              ❌ 取消
+            </button>
+          </template>
+        </div>
+
+        <!-- 고객 정보 -->
+        <div class="customer-info">
+          <img
+            :src="customer.pictureUrl || '/default-avatar.png'"
+            :alt="customer.displayName"
+            class="customer-avatar"
+          />
+          <div class="customer-details">
+            <h3 class="customer-name">{{ customer.displayName }}</h3>
+            <div class="customer-time-status">
+              <div class="time-info">
+                <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
+                <p v-if="customer.calledAt" class="customer-time">
+                  呼出: {{ formatTimestamp(customer.calledAt) }}
+                </p>
+              </div>
+              <span :class="['status-badge', getStatusClass(customer.status)]">
+                {{ getStatusLabel(customer.status) }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 액션 버튼 (PC에서만 여기에 표시) -->
+        <div class="customer-actions desktop-actions">
           <!-- 대기 중 -->
           <template v-if="customer.status === 'waiting'">
             <button
@@ -436,6 +498,7 @@ h1 {
 
 .customer-details {
   flex: 1;
+  min-width: 0;
 }
 
 .customer-name {
@@ -446,21 +509,20 @@ h1 {
 
 .customer-time-status {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.time-info {
+  flex: 1;
+  min-width: 0;
 }
 
 .customer-time {
   margin: 0;
   font-size: 0.85rem;
   color: #666;
-}
-
-/* 상태 */
-.customer-status {
-  min-width: 80px;
-  text-align: center;
 }
 
 .status-badge {
@@ -495,6 +557,15 @@ h1 {
 .customer-actions {
   display: flex;
   gap: 0.5rem;
+}
+
+/* PC에서는 mobile-actions 숨기고 desktop-actions 표시 */
+.mobile-actions {
+  display: none;
+}
+
+.desktop-actions {
+  display: flex;
 }
 
 .action-btn {
@@ -584,13 +655,23 @@ h1 {
     padding: 1.25rem;
   }
 
+  /* 모바일: desktop-actions 숨기고 mobile-actions 표시 */
+  .desktop-actions {
+    display: none !important;
+  }
+
+  .mobile-actions {
+    display: flex !important;
+    gap: 0.5rem;
+  }
+
   .queue-number {
-    min-width: 70px;
-    height: 70px;
+    min-width: 60px;
+    height: 60px;
   }
 
   .queue-number .number {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .customer-info {
@@ -612,15 +693,10 @@ h1 {
     gap: 0.5rem;
   }
 
-  .customer-actions {
-    width: 100%;
-    gap: 0.75rem;
-  }
-
   .action-btn {
     flex: 1;
-    padding: 1rem;
-    font-size: 1rem;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
   }
 }
 

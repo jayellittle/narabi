@@ -261,9 +261,9 @@ h1 {
 
 .qr-image-wrapper canvas {
   display: block;
+  width: 300px !important;
+  height: 300px !important;
   max-width: 100%;
-  height: auto !important;
-  width: 100% !important;
 }
 
 .qr-instruction {
@@ -448,9 +448,12 @@ h1 {
   .qr-image-wrapper {
     padding: 0.75rem;
     max-width: calc(100vw - 4rem);
+    box-sizing: border-box;
   }
 
   .qr-image-wrapper canvas {
+    width: 100% !important;
+    height: auto !important;
     max-width: 250px;
   }
 
