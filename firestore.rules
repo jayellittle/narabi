@@ -63,24 +63,25 @@ service cloud.firestore {
     match /storeJoinRequests/{requestId} {
       // 읽기: 요청한 사용자 또는 해당 매장의 오너
       allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
+        ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
         isStoreOwner(resource.data.storeId)
       );
 
-      // 생성: 인증된 사용자
+      // 생성: 인증된 사용자 (userId 필수)
       allow create: if isAuthenticated() &&
+                       'userId' in request.resource.data &&
                        request.resource.data.userId == request.auth.uid;
 
       // 업데이트: 매장 오너 또는 요청한 사용자 본인 (재신청용)
       allow update: if isAuthenticated() && (
         isStoreOwner(resource.data.storeId) ||
-        (resource.data.userId == request.auth.uid &&
-         request.resource.data.userId == request.auth.uid)
+        ('userId' in resource.data && resource.data.userId == request.auth.uid &&
+         'userId' in request.resource.data && request.resource.data.userId == request.auth.uid)
       );
 
       // 삭제: 요청한 사용자 또는 매장 오너
       allow delete: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
+        ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
         isStoreOwner(resource.data.storeId)
       );
     }
