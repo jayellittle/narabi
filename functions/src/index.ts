@@ -41,8 +41,23 @@ interface StoreInfo {
   address: string
   phoneNumber: string
   googleMapsUrl?: string
+  status?: 'pending' | 'approved' | 'rejected'
+  ownerId?: string
+  staffList?: StaffMember[]
+  qrCodeUrl?: string
 }
 
+interface StaffMember {
+  email: string
+  userId?: string
+  role: 'owner' | 'staff'
+  status: 'pending' | 'active' | 'rejected'
+  invitedAt: admin.firestore.Timestamp
+}
+
+// ========================================
+// 기존 함수: 대기열 등록
+// ========================================
 export const registerWaitlist = functions
   .runWith(runtimeOptsWithSecrets)
   .https.onCall(async (data) => {
@@ -125,11 +140,22 @@ export const registerWaitlist = functions
         )
       }
 
+      // 현재 대기 번호 계산
+      const currentWaiting = await db
+        .collection('stores')
+        .doc(storeId)
+        .collection('waitingList')
+        .where('status', '==', 'waiting')
+        .get()
+
+      const queueNumber = currentWaiting.size + 1
+
       await db.collection('stores').doc(storeId).collection('waitingList').add({
         lineUserId: lineProfile.userId,
         displayName: lineProfile.displayName,
         pictureUrl: lineProfile.pictureUrl,
         status: 'waiting',
+        queueNumber: queueNumber,
         createdAt: FieldValue.serverTimestamp(),
       })
 
@@ -137,9 +163,10 @@ export const registerWaitlist = functions
         lineUserId: lineProfile.userId,
         displayName: lineProfile.displayName,
         storeId: storeId,
+        queueNumber: queueNumber,
       })
 
-      return { success: true }
+      return { success: true, queueNumber: queueNumber }
     } catch (error: unknown) {
       if (error instanceof functions.https.HttpsError) {
         throw error
@@ -151,12 +178,15 @@ export const registerWaitlist = functions
     }
   })
 
+// ========================================
+// 기존 함수: 호출 알림 전송
+// ========================================
 export const sendCallNotification = functions
   .runWith(runtimeOptsWithSecrets)
   .https.onCall(async (data) => {
     if (!data || !data.storeId || !data.customerId) {
       logger.error('필수 파라미터 누락 (storeId 또는 customerId):', { data })
-      throw new functions.https.HttpsError('invalid-argument', 'storeId와 customerId는 필수입니다.')
+      throw new functions.https.HttpsError('invalid-argument', 'storeIdとcustomerIdは必須です。')
     }
     const { storeId, customerId } = data
     const MESSAGING_API_CHANNEL_ACCESS_TOKEN = process.env.MESSAGING_API_CHANNEL_ACCESS_TOKEN
@@ -182,7 +212,7 @@ export const sendCallNotification = functions
       const lineUserId = customerDoc.data()?.lineUserId
       if (!lineUserId) {
         logger.error('LINE 사용자 ID가 없음:', { customerId })
-        throw new functions.https.HttpsError('failed-precondition', '고객의 LINE ID가 없습니다.')
+        throw new functions.https.HttpsError('failed-precondition', '顧客のLINE IDがありません。')
       }
 
       const messageText = `【${storeData.name}】
@@ -190,7 +220,7 @@ export const sendCallNotification = functions
 大変お待たせいたしました。
 只今、お客様のお順番になりましたので、店舗の前までお越しください。
 
-📍店鋪位置
+📍店舗位置
 ${storeData.address}${storeData.googleMapsUrl ? `\nGoogle Maps: ${storeData.googleMapsUrl}` : ''}
 
 📞お問い合わせ
@@ -215,7 +245,10 @@ TEL: ${storeData.phoneNumber}`
         throw new Error(JSON.stringify(errorData))
       }
 
-      await customerDoc.ref.update({ status: 'called' })
+      await customerDoc.ref.update({
+        status: 'called',
+        calledAt: FieldValue.serverTimestamp(),
+      })
       logger.info('알림 전송 완료:', { customerId, lineUserId })
 
       return { success: true }
@@ -228,3 +261,458 @@ TEL: ${storeData.phoneNumber}`
       throw new functions.https.HttpsError('internal', '通知の送信に失敗しました。')
     }
   })
+
+// ========================================
+// 신규 함수: 매장 등록 신청
+// ========================================
+export const requestStoreRegistration = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    // 인증 확인
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    const { storeName, address, phoneNumber, googleMapsUrl, message } = data
+
+    if (!storeName || !address || !phoneNumber) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗名、住所、電話番号は必須です。')
+    }
+
+    try {
+      // 현재 시간을 먼저 가져오기
+      const now = admin.firestore.Timestamp.now()
+
+      // 매장 등록 신청 생성
+      const storeRef = await db.collection('stores').add({
+        name: storeName,
+        address,
+        phoneNumber,
+        googleMapsUrl: googleMapsUrl || '',
+        status: 'pending',
+        approvalRequestMessage: message || '',
+        ownerId: context.auth.uid,
+        ownerEmail: context.auth.token.email || '',
+        staffList: [
+          {
+            email: context.auth.token.email || '',
+            userId: context.auth.uid,
+            role: 'owner',
+            status: 'active',
+            invitedAt: now,
+          },
+        ],
+        createdAt: FieldValue.serverTimestamp(),
+      })
+
+      logger.info('매장 등록 신청 완료:', {
+        storeId: storeRef.id,
+        ownerId: context.auth.uid,
+        storeName,
+      })
+
+      return { success: true, storeId: storeRef.id }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('매장 등록 신청 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', '店舗登録に失敗しました。')
+    }
+  })
+
+// ========================================
+// 신규 함수: 기존 매장에 참여 요청
+// ========================================
+export const requestJoinStore = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    const { storeId, message } = data
+
+    if (!storeId) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDは必須です。')
+    }
+
+    try {
+      const storeDoc = await db.collection('stores').doc(storeId).get()
+      if (!storeDoc.exists) {
+        throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+      }
+
+      // 참여 요청 생성
+      const now = admin.firestore.Timestamp.now()
+
+      await db.collection('storeJoinRequests').add({
+        storeId,
+        userId: context.auth.uid,
+        userEmail: context.auth.token.email || '',
+        message: message || '',
+        status: 'pending',
+        createdAt: now,
+      })
+
+      logger.info('매장 참여 요청 완료:', {
+        storeId,
+        userId: context.auth.uid,
+      })
+
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof functions.https.HttpsError) {
+        throw error
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('매장 참여 요청 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', '参加リクエストに失敗しました。')
+    }
+  })
+
+// ========================================
+// 신규 함수: 매장 승인/거절 (관리자용)
+// ========================================
+export const approveStoreRegistration = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    // TODO: 관리자 권한 확인 로직 추가
+    // const isAdmin = await checkAdminRole(context.auth.uid)
+    // if (!isAdmin) {
+    //   throw new functions.https.HttpsError('permission-denied', '権限がありません。')
+    // }
+
+    const { storeId, approved } = data
+
+    if (!storeId || approved === undefined) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDと承認状態は必須です。')
+    }
+
+    try {
+      await db
+        .collection('stores')
+        .doc(storeId)
+        .update({
+          status: approved ? 'approved' : 'rejected',
+          approvedAt: FieldValue.serverTimestamp(),
+          approvedBy: context.auth.uid,
+        })
+
+      logger.info('매장 승인 처리 완료:', {
+        storeId,
+        approved,
+        approvedBy: context.auth.uid,
+      })
+
+      return { success: true }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('매장 승인 처리 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', '承認処理に失敗しました。')
+    }
+  })
+
+// ========================================
+// 신규 함수: 스태프 초대
+// ========================================
+export const inviteStaff = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    const { storeId, email, role } = data
+
+    if (!storeId || !email) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDとメールアドレスは必須です。')
+    }
+
+    try {
+      const storeDoc = await db.collection('stores').doc(storeId).get()
+      if (!storeDoc.exists) {
+        throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+      }
+
+      const storeData = storeDoc.data() as StoreInfo
+
+      // 권한 확인: owner만 초대 가능
+      const isOwner = storeData.ownerId === context.auth.uid
+      if (!isOwner) {
+        throw new functions.https.HttpsError('permission-denied', '権限がありません。')
+      }
+
+      // 이미 스태프 목록에 있는지 확인
+      const existingStaff = storeData.staffList?.find((staff) => staff.email === email)
+      if (existingStaff) {
+        throw new functions.https.HttpsError('already-exists', '既に招待されています。')
+      }
+
+      // 스태프 추가
+      const now = admin.firestore.Timestamp.now()
+
+      await db
+        .collection('stores')
+        .doc(storeId)
+        .update({
+          staffList: FieldValue.arrayUnion({
+            email,
+            role: role || 'staff',
+            status: 'pending',
+            invitedAt: now,
+          }),
+        })
+
+      logger.info('스태프 초대 완료:', {
+        storeId,
+        email,
+        invitedBy: context.auth.uid,
+      })
+
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof functions.https.HttpsError) {
+        throw error
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('스태프 초대 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', 'スタッフ招待に失敗しました。')
+    }
+  })
+
+// ========================================
+// 신규 함수: 스태프 초대 승인/거절
+// ========================================
+export const respondToStaffInvitation = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    const { storeId, accepted } = data
+
+    if (!storeId || accepted === undefined) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDと応答は必須です。')
+    }
+
+    try {
+      const storeDoc = await db.collection('stores').doc(storeId).get()
+      if (!storeDoc.exists) {
+        throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+      }
+
+      const storeData = storeDoc.data() as StoreInfo
+      const userEmail = context.auth.token.email
+
+      // 초대받은 스태프 찾기
+      const staffIndex = storeData.staffList?.findIndex(
+        (staff) => staff.email === userEmail && staff.status === 'pending',
+      )
+
+      if (staffIndex === undefined || staffIndex === -1) {
+        throw new functions.https.HttpsError('not-found', '招待が見つかりませんでした。')
+      }
+
+      // 스태프 상태 업데이트
+      const updatedStaffList = [...(storeData.staffList || [])]
+      updatedStaffList[staffIndex] = {
+        ...updatedStaffList[staffIndex],
+        status: accepted ? 'active' : 'rejected',
+        userId: accepted ? context.auth.uid : undefined,
+      }
+
+      await db.collection('stores').doc(storeId).update({
+        staffList: updatedStaffList,
+      })
+
+      logger.info('스태프 초대 응답 완료:', {
+        storeId,
+        userEmail,
+        accepted,
+      })
+
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof functions.https.HttpsError) {
+        throw error
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('스태프 초대 응답 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', '招待への応答に失敗しました。')
+    }
+  })
+
+// ========================================
+// 신규 함수: QR 코드 생성
+// ========================================
+export const generateStoreQR = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+  }
+
+  const { storeId } = data
+
+  if (!storeId) {
+    throw new functions.https.HttpsError('invalid-argument', '店舗IDは必須です。')
+  }
+
+  try {
+    const storeDoc = await db.collection('stores').doc(storeId).get()
+    if (!storeDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+    }
+
+    // QR 코드 URL 생성
+    const isEmulated = process.env.FUNCTIONS_EMULATOR === 'true'
+    const baseUrl = isEmulated ? 'http://localhost:5173' : 'https://narabi-a8765.web.app'
+    const qrUrl = `${baseUrl}/wait?store=${storeId}`
+
+    await db.collection('stores').doc(storeId).update({
+      qrCodeUrl: qrUrl,
+      updatedAt: FieldValue.serverTimestamp(),
+    })
+
+    logger.info('QR 코드 생성 완료:', { storeId, qrUrl })
+
+    return { success: true, qrUrl }
+  } catch (error: unknown) {
+    if (error instanceof functions.https.HttpsError) {
+      throw error
+    }
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('QR 코드 생성 실패:', errorMessage)
+    throw new functions.https.HttpsError('internal', 'QRコード生成に失敗しました。')
+  }
+})
+
+// ========================================
+// 신규 함수: 대기자 취소
+// ========================================
+export const cancelWaiting = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+  }
+
+  const { storeId, customerId } = data
+
+  if (!storeId || !customerId) {
+    throw new functions.https.HttpsError('invalid-argument', '店舗IDと顧客IDは必須です。')
+  }
+
+  try {
+    await db.collection('stores').doc(storeId).collection('waitingList').doc(customerId).update({
+      status: 'cancelled',
+      cancelledAt: FieldValue.serverTimestamp(),
+    })
+
+    logger.info('대기자 취소 완료:', { storeId, customerId })
+
+    return { success: true }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('대기자 취소 실패:', errorMessage)
+    throw new functions.https.HttpsError('internal', 'キャンセルに失敗しました。')
+  }
+})
+
+// ========================================
+// 신규 함수: 입장 완료 처리
+// ========================================
+export const completeEntry = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+  }
+
+  const { storeId, customerId } = data
+
+  if (!storeId || !customerId) {
+    throw new functions.https.HttpsError('invalid-argument', '店舗IDと顧客IDは必須です。')
+  }
+
+  try {
+    await db.collection('stores').doc(storeId).collection('waitingList').doc(customerId).update({
+      status: 'completed',
+      completedAt: FieldValue.serverTimestamp(),
+    })
+
+    logger.info('입장 완료 처리:', { storeId, customerId })
+
+    return { success: true }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('입장 완료 처리 실패:', errorMessage)
+    throw new functions.https.HttpsError('internal', '完了処理に失敗しました。')
+  }
+})
+
+// ========================================
+// 신규 함수: 대기 시간 추정
+// ========================================
+export const getEstimatedWaitTime = functions.https.onCall(async (data) => {
+  const { storeId, queueNumber } = data
+
+  if (!storeId || !queueNumber) {
+    throw new functions.https.HttpsError('invalid-argument', '店舗IDと待ち番号は必須です。')
+  }
+
+  try {
+    // 평균 처리 시간 계산 (최근 10명의 평균)
+    const completedCustomers = await db
+      .collection('stores')
+      .doc(storeId)
+      .collection('waitingList')
+      .where('status', '==', 'completed')
+      .orderBy('completedAt', 'desc')
+      .limit(10)
+      .get()
+
+    let avgProcessingTime = 15 // 기본값: 15분
+
+    if (!completedCustomers.empty) {
+      let totalTime = 0
+      let count = 0
+
+      completedCustomers.forEach((doc) => {
+        const data = doc.data()
+        if (data.createdAt && data.completedAt) {
+          const createdAt = data.createdAt.toDate()
+          const completedAt = data.completedAt.toDate()
+          const processingTime = (completedAt.getTime() - createdAt.getTime()) / (1000 * 60) // 분 단위
+          totalTime += processingTime
+          count++
+        }
+      })
+
+      if (count > 0) {
+        avgProcessingTime = Math.round(totalTime / count)
+      }
+    }
+
+    // 현재 대기 중인 사람 수 계산
+    const currentWaiting = await db
+      .collection('stores')
+      .doc(storeId)
+      .collection('waitingList')
+      .where('status', '==', 'waiting')
+      .where('queueNumber', '<', queueNumber)
+      .get()
+
+    const peopleAhead = currentWaiting.size
+    const estimatedWaitTime = peopleAhead * avgProcessingTime
+
+    return {
+      success: true,
+      estimatedWaitTime,
+      peopleAhead,
+      avgProcessingTime,
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('대기 시간 추정 실패:', errorMessage)
+    throw new functions.https.HttpsError('internal', '待ち時間の推定に失敗しました。')
+  }
+})

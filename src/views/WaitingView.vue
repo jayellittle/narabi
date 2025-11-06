@@ -46,7 +46,8 @@ const errorMessage = ref('')
 const route = useRoute()
 const router = useRouter()
 
-const currentStoreId = ref((route.params.storeId as string) || '')
+// query parameter에서 storeId 읽기
+const currentStoreId = ref((route.query.store as string) || '')
 
 const loginWithLine = () => {
   localStorage.setItem('storeIdForLogin', currentStoreId.value)
@@ -66,7 +67,7 @@ const loginWithLine = () => {
 }
 
 const goBack = () => {
-  router.replace({ path: `/wait/${currentStoreId.value}` })
+  router.replace({ path: '/wait', query: { store: currentStoreId.value } })
   status.value = 'initial'
 }
 
@@ -99,8 +100,8 @@ onMounted(async () => {
     }
   }
   // CASE 2: QRコードで初めて接続した場合 (code無し・URLにstoreIdが有り)
-  else if (route.params.storeId) {
-    currentStoreId.value = route.params.storeId as string
+  else if (route.query.store) {
+    currentStoreId.value = route.query.store as string
   }
   // CASE 3: 不正なアクセスの場合
   else {

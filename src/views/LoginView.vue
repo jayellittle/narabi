@@ -38,125 +38,155 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
 import type { AuthError } from 'firebase/auth'
+import { auth } from '../firebase' // ← 여기가 중요!
 
 const router = useRouter()
-const auth = getAuth()
 
 const email = ref('')
 const password = ref('')
 const errorMessage = ref('')
 const isSignUp = ref(false)
 
-const isAuthError = (error: unknown): error is AuthError => {
-  return (error as AuthError)?.code !== undefined
-}
-
 const handleSignUp = async () => {
+  errorMessage.value = ''
   try {
     await createUserWithEmailAndPassword(auth, email.value, password.value)
     router.push('/dashboard')
   } catch (error: unknown) {
-    if (isAuthError(error)) {
-      errorMessage.value = getErrorMessage(error.code)
-    } else {
-      errorMessage.value = 'エラーが発生しました。'
-    }
+    const authError = error as AuthError
+    console.error('会員登録エラー:', authError)
+    errorMessage.value = getErrorMessage(authError.code)
   }
 }
 
 const handleSignIn = async () => {
+  errorMessage.value = ''
   try {
     await signInWithEmailAndPassword(auth, email.value, password.value)
     router.push('/dashboard')
   } catch (error: unknown) {
-    if (isAuthError(error)) {
-      errorMessage.value = getErrorMessage(error.code)
-    } else {
-      errorMessage.value = 'エラーが発生しました。'
-    }
+    const authError = error as AuthError
+    console.error('ログインエラー:', authError)
+    errorMessage.value = getErrorMessage(authError.code)
   }
 }
 
 const getErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
     case 'auth/invalid-email':
-      return '無効なメールアドレスです。'
+      return 'メールアドレスの形式が正しくありません。'
+    case 'auth/user-disabled':
+      return 'このアカウントは無効化されています。'
     case 'auth/user-not-found':
       return '登録されていないメールアドレスです。'
     case 'auth/wrong-password':
       return 'パスワードが間違っています。'
     case 'auth/email-already-in-use':
-      return '既に登録されているメールアドレスです。'
+      return 'このメールアドレスは既に登録されています。'
     case 'auth/weak-password':
-      return 'パスワードは６文字以上で設定してください。'
+      return 'パスワードは6文字以上で設定してください。'
     case 'auth/invalid-credential':
-      return 'メールアドレスまたはパスワードが間違っています。'
-    case 'auth/too-many-requests':
-      return 'リクエスト過多により一時的にアクセスがブロックされています。'
+      return '登録されていないメールアドレスです。'
     default:
-      return 'エラーが発生しました。後ほど再度お試しください。'
+      return 'エラーが発生しました。もう一度お試しください。'
   }
 }
 </script>
 
 <style scoped>
+.logo-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.app-logo {
+  width: 200px;
+  height: auto;
+  margin-bottom: 16px;
+}
+
+.logo-text {
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+}
+
 .login-container {
   max-width: 400px;
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
   margin: 0 auto;
+  padding: 40px 20px;
 }
-.logo-container {
-  text-align: center;
-  margin-bottom: 30px;
-}
-.app-logo {
-  width: 240px;
-  object-fit: contain;
-  margin-bottom: 2px;
-}
-.logo-text {
-  color: #212758;
-  margin-top: 0;
-  margin-bottom: 0;
-  font-weight: 800;
-  font-size: 18px;
-}
+
 .login-title {
   text-align: center;
+  margin-bottom: 30px;
+  font-size: 28px;
+  color: #333;
+}
+
+.form-group {
   margin-bottom: 20px;
 }
-.form-group {
-  margin-bottom: 15px;
+
+.form-group input {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
 }
+
+.form-group input:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.error-message {
+  color: #f44336;
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
 .main-button {
   width: 100%;
-  padding: 10px;
-  background-color: #007bff;
+  padding: 12px;
+  background-color: #2196f3;
   color: white;
   border: none;
   border-radius: 4px;
+  font-size: 16px;
   cursor: pointer;
+  margin-bottom: 20px;
 }
-input {
-  width: 100%;
-  padding: 10px;
-  box-sizing: border-box;
+
+.main-button:hover {
+  background-color: #1976d2;
 }
-.error-message {
-  color: red;
-  margin-bottom: 15px;
-}
+
 p {
-  margin-top: 15px;
   text-align: center;
+  color: #666;
+}
+
+p button {
+  background: none;
+  border: none;
+  color: #2196f3;
+  cursor: pointer;
+  text-decoration: underline;
   font-size: 14px;
 }
-a {
-  color: #007bff;
-  cursor: pointer;
+
+p button:hover {
+  color: #1976d2;
 }
 </style>

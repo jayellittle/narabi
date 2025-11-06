@@ -1,73 +1,94 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { getAuth, onAuthStateChanged } from 'firebase/auth'
-import DashboardView from '../views/DashboardView.vue'
+// src/router/index.ts
 
-// 현재 사용자 상태를 비동기적으로 확인하는 헬퍼 함수
-const getCurrentUser = () => {
-  return new Promise((resolve, reject) => {
-    const removeListener = onAuthStateChanged(
-      getAuth(),
-      (user) => {
-        removeListener() // 리스너 정리
-        resolve(user)
-      },
-      reject,
-    )
-  })
-}
+import { createRouter, createWebHistory } from 'vue-router'
+import { getAuth } from 'firebase/auth'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHistory(),
   routes: [
     {
       path: '/',
-      redirect: '/dashboard', // 최상위 경로는 대시보드로 리디렉션
+      redirect: '/dashboard',
     },
     {
       path: '/login',
-      name: 'login',
+      name: 'Login',
       component: () => import('../views/LoginView.vue'),
     },
     {
+      path: '/wait',
+      name: 'Wait',
+      component: () => import('../views/WaitingView.vue'),
+    },
+    {
+      path: '/register-store',
+      name: 'StoreRegistration',
+      component: () => import('../views/StoreRegistrationView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/dashboard',
-      name: 'dashboard',
-      component: DashboardView,
+      name: 'Dashboard',
+      component: () => import('../views/DashboardView.vue'),
       meta: { requiresAuth: true },
     },
     {
       path: '/store/:storeId',
-      name: 'storeDetail',
+      name: 'StoreDetail',
       component: () => import('../views/StoreDetailView.vue'),
       meta: { requiresAuth: true },
+      children: [
+        {
+          path: 'qr',
+          name: 'QRCode',
+          component: () => import('../views/QRCodeView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'waiting',
+          name: 'WaitingList',
+          component: () => import('../views/WaitingListManagementView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'staff',
+          name: 'Staff',
+          component: () => import('../views/StaffManagementView.vue'),
+          meta: { requiresAuth: true },
+        },
+      ],
     },
     {
-      // 1. QR코드를 통해 처음 접속할 때 사용하는 경로
-      path: '/wait/:storeId',
-      name: 'waiting',
-      component: () => import('../views/WaitingView.vue'),
-    },
-    {
-      // 2. LINE 로그인 후 돌아올 때 사용하는 경로
-      path: '/wait',
-      name: 'waitingCallback',
-      component: () => import('../views/WaitingView.vue'),
+      path: '/:pathMatch(.*)*',
+      redirect: '/dashboard',
     },
   ],
 })
 
-// 라우팅 가드 설정 (페이지 이동 직전에 매번 실행됨)
+// 네비게이션 가드: 인증 필요한 라우트 보호
 router.beforeEach(async (to, from, next) => {
+  const auth = getAuth()
   const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
-  const user = await getCurrentUser()
 
-  if (requiresAuth && !user) {
-    // 로그인이 필요한 페이지에 로그인 없이 접근 시, 로그인 페이지로 강제 이동
-    next('/login')
-  } else if (to.name === 'login' && user) {
-    // 이미 로그인한 상태에서 로그인 페이지 접근 시, 대시보드로 강제 이동
-    next('/dashboard')
+  if (requiresAuth) {
+    // 인증 상태 확인
+    const user = await new Promise((resolve) => {
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        unsubscribe()
+        resolve(user)
+      })
+    })
+
+    if (!user) {
+      // 로그인되지 않은 경우 로그인 페이지로
+      next({
+        path: '/login',
+        query: { redirect: to.fullPath },
+      })
+    } else {
+      next()
+    }
   } else {
-    // 그 외의 경우는 정상적으로 이동 허용
     next()
   }
 })

@@ -1,265 +1,410 @@
 <template>
-  <div>
-    <h2>店舗管理</h2>
-
-    <ul>
-      <li v-for="store in myStores" :key="store.id">
-        <router-link :to="`/store/${store.id}`">
-          {{ store.name }}
-        </router-link>
-      </li>
-    </ul>
-    <p v-if="myStores.length === 0">登録された店舗がありません。</p>
-
-    <hr />
-
-    <h3>新しい店舗を追加</h3>
-    <div>「*」は必須項目です。</div>
-    <div class="store-form">
-      <div class="form-group">
-        <label>店舗名 *</label>
-        <input v-model="newStore.name" type="text" placeholder="新しい店舗名" required />
+  <div class="dashboard-container">
+    <!-- 사이드바 -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>🏪 NARABI</h2>
+        <button @click="handleSignOut" class="logout-btn">ログアウト</button>
       </div>
 
-      <div class="form-group">
-        <label>住所 *</label>
-        <input v-model="newStore.address" type="text" placeholder="店舗の住所" required />
+      <!-- 로딩 -->
+      <div v-if="isLoading" class="loading">読み込み中...</div>
+
+      <div v-else>
+        <!-- 승인된 매장 목록 -->
+        <div class="store-section">
+          <h3>店舗一覧</h3>
+
+          <div v-if="approvedStores.length === 0 && pendingStores.length === 0" class="no-stores">
+            <p>登録された店舗がありません。</p>
+            <button @click="goToRegisterStore" class="primary-btn">+ 店舗を登録</button>
+          </div>
+
+          <div v-else class="store-list">
+            <div
+              v-for="store in approvedStores"
+              :key="store.id"
+              :class="['store-item', { active: selectedStoreId === store.id }]"
+              @click="selectStore(store.id)"
+            >
+              <div class="store-icon">🏪</div>
+              <div class="store-info">
+                <div class="store-name">{{ store.name }}</div>
+                <div class="store-address">{{ store.address }}</div>
+              </div>
+            </div>
+
+            <!-- 승인 대기 중 -->
+            <div v-for="store in pendingStores" :key="store.id" class="store-item pending">
+              <div class="store-icon">⏳</div>
+              <div class="store-info">
+                <div class="store-name">{{ store.name }}</div>
+                <div class="pending-label">承認待ち</div>
+              </div>
+            </div>
+          </div>
+
+          <button v-if="myStores.length > 0" @click="goToRegisterStore" class="add-store-btn">
+            + 店舗を追加
+          </button>
+        </div>
       </div>
+    </aside>
 
-      <div class="form-group">
-        <label>電話番号 *</label>
-        <input
-          v-model="newStore.phoneNumber"
-          type="tel"
-          placeholder="店舗の電話番号"
-          required
-          :class="{ 'input-error': phoneError }"
-          @blur="validatePhoneNumberBlur"
-        />
-        <span v-if="phoneError" class="error-text">{{ phoneError }}</span>
+    <!-- 메인 컨텐츠 -->
+    <main class="main-content">
+      <div class="welcome">
+        <h1>NARABI 順番待ち管理システム</h1>
+        <p>左のメニューから店舗を選択してください。</p>
+        <div class="welcome-image">🎫</div>
       </div>
-
-      <div class="form-group">
-        <label>Google Maps URL (任意)</label>
-        <input
-          v-model="newStore.googleMapsUrl"
-          type="url"
-          placeholder="例： https://maps.google.com/..."
-          :class="{ 'input-error': urlError }"
-          @blur="validateUrlBlur"
-        />
-        <span v-if="urlError" class="error-text">{{ urlError }}</span>
-      </div>
-
-      <button @click="createStore" :disabled="!canCreateStore">追加</button>
-    </div>
-
-    <button @click="handleSignOut">ログアウト</button>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
-import { getFirestore, collection, addDoc, query, where, onSnapshot } from 'firebase/firestore'
-import { getAuth, signOut } from 'firebase/auth'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { signOut } from 'firebase/auth'
+import { useRouter, useRoute } from 'vue-router'
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore'
+import { auth } from '../firebase'
 
 interface Store {
   id: string
   name: string
-}
-
-interface NewStore {
-  name: string
   address: string
-  phoneNumber: string
-  googleMapsUrl: string
+  status?: string
 }
 
-const db = getFirestore()
-const auth = getAuth()
 const router = useRouter()
+const route = useRoute()
+const db = getFirestore()
 
 const myStores = ref<Store[]>([])
-const newStore = ref<NewStore>({
-  name: '',
-  address: '',
-  phoneNumber: '',
-  googleMapsUrl: '',
+const isLoading = ref(true)
+const selectedStoreId = ref<string | null>(null)
+
+// 현재 선택된 매장
+const selectedStore = computed(() => {
+  if (!selectedStoreId.value) return null
+  return myStores.value.find((s) => s.id === selectedStoreId.value) || null
 })
 
-const phoneError = ref('')
-const urlError = ref('')
+// 승인된 매장만 필터링
+const approvedStores = computed(() => {
+  return myStores.value.filter((s) => s.status === 'approved' || !s.status)
+})
 
-const validatePhoneNumber = (phone: string): boolean => {
-  const phoneRegex = /^[0-9]{2,4}-[0-9]{2,4}-[0-9]{4}$/
-  return phoneRegex.test(phone)
-}
+// 승인 대기 중인 매장
+const pendingStores = computed(() => {
+  return myStores.value.filter((s) => s.status === 'pending')
+})
 
-const validateUrl = (url: string): boolean => {
-  if (!url) return true
+// 매장 로드 - 오너 + 스태프로 등록된 매장 모두 가져오기
+const loadStores = async () => {
+  isLoading.value = true
   try {
-    new URL(url)
-    return url.startsWith('http://') || url.startsWith('https://')
-  } catch {
-    return false
-  }
-}
-
-const validatePhoneNumberBlur = () => {
-  if (!newStore.value.phoneNumber) {
-    phoneError.value = ''
-    return
-  }
-  if (!validatePhoneNumber(newStore.value.phoneNumber)) {
-    phoneError.value = '電話番号の形式が正しくありません。（例：03-1234-5678）'
-  } else {
-    phoneError.value = ''
-  }
-}
-
-const validateUrlBlur = () => {
-  if (!newStore.value.googleMapsUrl) {
-    urlError.value = ''
-    return
-  }
-  if (!validateUrl(newStore.value.googleMapsUrl)) {
-    urlError.value = '有効なURLを入力してください。'
-  } else {
-    urlError.value = ''
-  }
-}
-
-const canCreateStore = computed(() => {
-  const hasRequiredFields =
-    newStore.value.name.trim() && newStore.value.address.trim() && newStore.value.phoneNumber.trim()
-
-  if (!hasRequiredFields) return false
-
-  if (!validatePhoneNumber(newStore.value.phoneNumber)) {
-    return false
-  }
-
-  if (newStore.value.googleMapsUrl && !validateUrl(newStore.value.googleMapsUrl)) {
-    return false
-  }
-
-  return true
-})
-
-watch(
-  () => newStore.value.phoneNumber,
-  () => {
-    if (phoneError.value) {
-      phoneError.value = ''
+    const user = auth.currentUser
+    if (!user) {
+      router.push('/login')
+      return
     }
-  },
-)
 
-watch(
-  () => newStore.value.googleMapsUrl,
-  () => {
-    if (urlError.value) {
-      urlError.value = ''
-    }
-  },
-)
+    // 1. 내가 오너인 매장
+    const ownerQuery = query(collection(db, 'stores'), where('ownerId', '==', user.uid))
+    const ownerSnapshot = await getDocs(ownerQuery)
 
-onMounted(() => {
-  const user = auth.currentUser
-  if (user) {
-    const q = query(collection(db, 'stores'), where('ownerId', '==', user.uid))
+    // 2. 모든 매장을 가져와서 staffList에 내 이메일이 있는지 확인
+    const allStoresQuery = query(collection(db, 'stores'))
+    const allStoresSnapshot = await getDocs(allStoresQuery)
 
-    onSnapshot(q, (snapshot) => {
-      myStores.value = snapshot.docs.map((doc) => ({
+    const storesMap = new Map<string, Store>()
+
+    // 오너인 매장 추가
+    ownerSnapshot.docs.forEach((doc) => {
+      storesMap.set(doc.id, {
         id: doc.id,
         name: doc.data().name as string,
-      }))
+        address: doc.data().address as string,
+        status: (doc.data().status as string) || 'approved',
+      })
     })
-  }
-})
 
-const createStore = async () => {
-  const user = auth.currentUser
-  if (user && canCreateStore.value) {
-    try {
-      const storeData = {
-        name: newStore.value.name.trim(),
-        address: newStore.value.address.trim(),
-        phoneNumber: newStore.value.phoneNumber.trim(),
-        googleMapsUrl: newStore.value.googleMapsUrl.trim(),
-        ownerId: user.uid,
-        createdAt: new Date(),
+    // 스태프로 등록된 매장 추가
+    allStoresSnapshot.docs.forEach((doc) => {
+      const data = doc.data()
+      const staffList = data.staffList || []
+
+      // staffList에서 내 이메일이 active 상태인지 확인
+      const isStaff = staffList.some(
+        (staff: any) => staff.email === user.email && staff.status === 'active',
+      )
+
+      if (isStaff && !storesMap.has(doc.id)) {
+        storesMap.set(doc.id, {
+          id: doc.id,
+          name: data.name as string,
+          address: data.address as string,
+          status: (data.status as string) || 'approved',
+        })
       }
+    })
 
-      if (newStore.value.googleMapsUrl.trim()) {
-        storeData.googleMapsUrl = newStore.value.googleMapsUrl.trim()
-      }
+    myStores.value = Array.from(storesMap.values())
 
-      const docRef = await addDoc(collection(db, 'stores'), storeData)
-
-      newStore.value = {
-        name: '',
-        address: '',
-        phoneNumber: '',
-        googleMapsUrl: '',
-      }
-
-      router.push(`/store/${docRef.id}`)
-    } catch (error) {
-      console.error('점포 작성 에러:', error)
-      alert('店舗の作成に失敗しました。')
+    // URL에 storeId가 있으면 자동 선택
+    if (route.params.storeId) {
+      selectedStoreId.value = route.params.storeId as string
+    } else if (approvedStores.value.length > 0) {
+      // 첫 번째 승인된 매장 자동 선택
+      selectedStoreId.value = approvedStores.value[0].id
     }
+  } catch (error) {
+    console.error('매장 로드 실패:', error)
+  } finally {
+    isLoading.value = false
   }
 }
 
+// 매장 선택
+const selectStore = (storeId: string) => {
+  selectedStoreId.value = storeId
+  router.push(`/store/${storeId}/waiting`)
+}
+
+// 로그아웃
 const handleSignOut = async () => {
   try {
     await signOut(auth)
-    router.push('/login') // 로그아웃 성공 시 로그인 페이지로 이동
+    router.push('/login')
   } catch (error) {
     console.error('로그아웃 실패:', error)
   }
 }
+
+// 매장 등록 페이지로 이동
+const goToRegisterStore = () => {
+  router.push('/register-store')
+}
+
+onMounted(() => {
+  loadStores()
+})
 </script>
 
 <style scoped>
-.store-form {
-  max-width: 400px;
-  margin: 20px 0;
+.dashboard-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f5f5;
 }
 
-.form-group {
-  margin-bottom: 15px;
+/* 사이드바 */
+.sidebar {
+  width: 300px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
 }
 
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.form-group input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
+.sidebar-header h2 {
+  margin: 0;
+  color: #4caf50;
+  font-size: 1.5rem;
+}
+
+.logout-btn {
+  padding: 0.5rem 1rem;
+  background-color: #f44336;
+  color: white;
+  border: none;
   border-radius: 4px;
-  box-sizing: border-box;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.3s;
 }
 
-.input-error {
-  border-color: #ff4444 !important;
+.logout-btn:hover {
+  background-color: #da190b;
 }
 
-.error-text {
-  display: block;
-  color: #ff4444;
-  font-size: 12px;
-  margin-top: 4px;
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
 }
 
-button:disabled {
-  background-color: #ccc;
-  cursor: not-allowed;
+/* 매장 섹션 */
+.store-section {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.store-section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.no-stores {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.no-stores p {
+  color: #999;
+  margin-bottom: 1rem;
+}
+
+.primary-btn {
+  padding: 0.75rem 1.5rem;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.primary-btn:hover {
+  background-color: #45a049;
+}
+
+.store-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.store-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.store-item:not(.pending):hover {
+  background-color: #f5f5f5;
+}
+
+.store-item.active {
+  background-color: #e8f5e9;
+  border-left: 3px solid #4caf50;
+}
+
+.store-item.pending {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.store-icon {
+  font-size: 1.5rem;
+}
+
+.store-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.store-name {
+  font-weight: 500;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-address {
+  font-size: 0.8rem;
+  color: #999;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.25rem;
+}
+
+.pending-label {
+  font-size: 0.75rem;
+  color: #ff9800;
+  margin-top: 0.25rem;
+}
+
+.add-store-btn {
+  width: 100%;
+  padding: 0.75rem;
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px dashed #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.add-store-btn:hover {
+  background-color: #e0e0e0;
+  border-color: #999;
+}
+
+/* 메인 컨텐츠 */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.welcome {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.welcome h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 1rem;
+}
+
+.welcome p {
+  font-size: 1.2rem;
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.welcome-image {
+  font-size: 8rem;
+  opacity: 0.3;
+}
+
+/* 반응형 */
+@media (max-width: 768px) {
+  .dashboard-container {
+    flex-direction: column;
+  }
+
+  .sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .main-content {
+    padding: 1rem;
+  }
 }
 </style>
