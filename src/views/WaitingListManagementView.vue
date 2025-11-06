@@ -536,22 +536,103 @@ h1 {
 
 /* 반응형 */
 @media (max-width: 768px) {
+  .waiting-list-container {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .stats {
+    flex-direction: column;
+  }
+
+  .stat-card {
+    padding: 1.25rem;
+  }
+
+  .stat-value {
+    font-size: 2rem;
+  }
+
+  .filters {
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+  }
+
+  .filters button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
   .customer-card {
     flex-direction: column;
     align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .queue-number {
+    min-width: 70px;
+    height: 70px;
+  }
+
+  .queue-number .number {
+    font-size: 2rem;
+  }
+
+  .customer-info {
+    width: 100%;
+  }
+
+  .customer-avatar {
+    width: 50px;
+    height: 50px;
+  }
+
+  .customer-name {
+    font-size: 1.1rem;
+  }
+
+  .customer-status {
+    width: 100%;
+    text-align: left;
   }
 
   .customer-actions {
     width: 100%;
     flex-direction: column;
+    gap: 0.75rem;
   }
 
   .action-btn {
     width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+}
+
+/* 小さいモバイル画面 */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.3rem;
   }
 
-  .stats {
-    flex-direction: column;
+  .stat-value {
+    font-size: 1.75rem;
+  }
+
+  .queue-number {
+    min-width: 60px;
+    height: 60px;
+  }
+
+  .queue-number .number {
+    font-size: 1.6rem;
   }
 }
 </style>

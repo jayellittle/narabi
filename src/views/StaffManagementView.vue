@@ -773,4 +773,114 @@ h1 {
   background-color: #ccc;
   cursor: not-allowed;
 }
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .staff-management-container {
+    padding: 1rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .invite-button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .staff-section {
+    padding: 1.25rem;
+  }
+
+  .staff-section h2 {
+    font-size: 1.2rem;
+  }
+
+  .staff-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .staff-info {
+    width: 100%;
+  }
+
+  .staff-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 2.5rem;
+  }
+
+  .staff-email {
+    font-size: 1rem;
+  }
+
+  .staff-actions {
+    width: 100%;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .action-btn {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 1rem;
+  }
+
+  .staff-actions-row {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 1.5rem;
+  }
+
+  .modal-content h2 {
+    font-size: 1.3rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    font-size: 16px; /* iOS のズーム防止 */
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .cancel-button,
+  .submit-button {
+    width: 100%;
+  }
+}
+
+/* 小さいモバイル画面 */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .staff-section h2 {
+    font-size: 1.1rem;
+  }
+
+  .staff-icon {
+    width: 50px;
+    height: 50px;
+    font-size: 2rem;
+  }
+}
 </style>
