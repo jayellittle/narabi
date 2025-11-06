@@ -415,6 +415,87 @@ h1 {
   font-size: 0.9rem;
 }
 
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .qr-code-container {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .qr-display {
+    padding: 1.5rem;
+  }
+
+  .qr-display h2 {
+    font-size: 1.2rem;
+  }
+
+  .qr-image-wrapper {
+    padding: 0.75rem;
+  }
+
+  .qr-image-wrapper canvas {
+    max-width: 100%;
+    height: auto !important;
+    width: 250px !important;
+  }
+
+  .info-card {
+    padding: 1.25rem;
+  }
+
+  .info-icon {
+    font-size: 2rem;
+  }
+
+  .info-value {
+    font-size: 1.5rem;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+  }
+
+  .action-button {
+    width: 100%;
+    padding: 1.25rem;
+    font-size: 1.1rem;
+  }
+
+  .waiting-preview {
+    padding: 1.25rem;
+  }
+
+  .preview-item {
+    padding: 1rem;
+  }
+
+  .preview-avatar {
+    width: 50px;
+    height: 50px;
+  }
+}
+
+/* 小さいモバイル画面 */
+@media (max-width: 480px) {
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .qr-image-wrapper canvas {
+    width: 200px !important;
+  }
+
+  .action-button {
+    font-size: 1rem;
+    padding: 1rem;
+  }
+}
+
 @media print {
   .action-buttons,
   .waiting-info,

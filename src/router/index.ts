@@ -39,6 +39,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
       children: [
         {
+          path: '',
+          name: 'StoreManagementMenu',
+          component: () => import('../views/StoreManagementMenuView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
           path: 'qr',
           name: 'QRCode',
           component: () => import('../views/QRCodeView.vue'),

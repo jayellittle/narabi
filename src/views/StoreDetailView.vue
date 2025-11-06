@@ -1,7 +1,7 @@
 <template>
   <div class="store-detail-container">
-    <!-- 사이드바 -->
-    <aside class="sidebar">
+    <!-- 사이드바 (데스크톱 또는 모바일 메뉴 페이지에서만 표시) -->
+    <aside class="sidebar" :class="{ 'hide-on-mobile': !isMenuPage }">
       <div class="sidebar-header">
         <h2>🏪 NARABI</h2>
         <button @click="goBack" class="back-btn">← 戻る</button>
@@ -20,6 +20,10 @@
         <!-- 관리 메뉴 -->
         <nav class="nav-menu">
           <h3>管理メニュー</h3>
+          <router-link :to="`/store/${storeId}`" class="nav-item" :class="{ active: isMenuPage }" exact>
+            <span class="nav-icon">🏠</span>
+            メニュー
+          </router-link>
           <router-link :to="`/store/${storeId}/qr`" class="nav-item" active-class="active">
             <span class="nav-icon">📱</span>
             QRコード表示
@@ -39,7 +43,16 @@
     </aside>
 
     <!-- 메인 컨텐츠 -->
-    <main class="main-content">
+    <main class="main-content" :class="{ 'full-width-mobile': !isMenuPage }">
+      <!-- 모바일 헤더 (서브 페이지에서만 표시) -->
+      <div v-if="!isMenuPage && store" class="mobile-header">
+        <button @click="goToMenu" class="mobile-back-btn">
+          <span class="back-arrow">←</span>
+          <span class="back-text">メニュー</span>
+        </button>
+        <div class="mobile-store-name">{{ store.name }}</div>
+      </div>
+
       <router-view v-if="store" />
       <div v-else class="loading-content">
         <p>店舗情報を読み込み中...</p>
@@ -49,7 +62,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getFirestore, doc, getDoc } from 'firebase/firestore'
 
@@ -69,6 +82,11 @@ const router = useRouter()
 const storeId = route.params.storeId as string
 
 const store = ref<Store | null>(null)
+
+// 現在のページがメニューページかどうか
+const isMenuPage = computed(() => {
+  return route.name === 'StoreManagementMenu'
+})
 
 onMounted(async () => {
   if (storeId) {
@@ -96,6 +114,10 @@ onMounted(async () => {
 
 const goBack = () => {
   router.push('/dashboard')
+}
+
+const goToMenu = () => {
+  router.push(`/store/${storeId}`)
 }
 </script>
 
@@ -255,10 +277,71 @@ const goBack = () => {
   color: #666;
 }
 
-/* 반응형 */
+/* モバイルヘッダー */
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 1rem;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mobile-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 1rem;
+}
+
+.mobile-back-btn:hover {
+  background: #e0e0e0;
+}
+
+.mobile-back-btn:active {
+  background: #d0d0d0;
+}
+
+.back-arrow {
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.back-text {
+  font-weight: 500;
+  color: #333;
+}
+
+.mobile-store-name {
+  flex: 1;
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: 1rem;
+}
+
+/* 반応형 */
 @media (max-width: 768px) {
   .store-detail-container {
     flex-direction: column;
+  }
+
+  /* モバイルでサブページの場合はサイドバーを非表示 */
+  .sidebar.hide-on-mobile {
+    display: none;
   }
 
   .sidebar {
@@ -268,7 +351,16 @@ const goBack = () => {
   }
 
   .main-content {
-    padding: 1rem;
+    padding: 0;
+  }
+
+  .main-content.full-width-mobile {
+    width: 100%;
+  }
+
+  /* モバイルヘッダーを表示 */
+  .mobile-header {
+    display: flex;
   }
 
   .store-card {
