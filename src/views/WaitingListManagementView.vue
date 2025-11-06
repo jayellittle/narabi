@@ -198,30 +198,7 @@ onMounted(() => {
           <div class="label">番</div>
         </div>
 
-        <!-- 고객 정보 -->
-        <div class="customer-info">
-          <img
-            :src="customer.pictureUrl || '/default-avatar.png'"
-            :alt="customer.displayName"
-            class="customer-avatar"
-          />
-          <div class="customer-details">
-            <h3 class="customer-name">{{ customer.displayName }}</h3>
-            <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
-            <p v-if="customer.calledAt" class="customer-time">
-              呼出: {{ formatTimestamp(customer.calledAt) }}
-            </p>
-          </div>
-        </div>
-
-        <!-- 상태 -->
-        <div class="customer-status">
-          <span :class="['status-badge', getStatusClass(customer.status)]">
-            {{ getStatusLabel(customer.status) }}
-          </span>
-        </div>
-
-        <!-- 액션 버튼 -->
+        <!-- 액션 버튼 (맨 위로 이동) -->
         <div class="customer-actions">
           <!-- 대기 중 -->
           <template v-if="customer.status === 'waiting'">
@@ -258,6 +235,28 @@ onMounted(() => {
               ❌ 取消
             </button>
           </template>
+        </div>
+
+        <!-- 고객 정보 -->
+        <div class="customer-info">
+          <img
+            :src="customer.pictureUrl || '/default-avatar.png'"
+            :alt="customer.displayName"
+            class="customer-avatar"
+          />
+          <div class="customer-details">
+            <h3 class="customer-name">{{ customer.displayName }}</h3>
+            <div class="customer-time-status">
+              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
+              <p v-if="customer.calledAt" class="customer-time">
+                呼出: {{ formatTimestamp(customer.calledAt) }}
+              </p>
+              <!-- 상태 (시간 옆으로 이동) -->
+              <span :class="['status-badge', getStatusClass(customer.status)]">
+                {{ getStatusLabel(customer.status) }}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -440,13 +439,20 @@ h1 {
 }
 
 .customer-name {
-  margin: 0 0 0.25rem 0;
+  margin: 0 0 0.5rem 0;
   font-size: 1.2rem;
   color: #333;
 }
 
+.customer-time-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .customer-time {
-  margin: 0.125rem 0;
+  margin: 0;
   font-size: 0.85rem;
   color: #666;
 }
@@ -600,19 +606,19 @@ h1 {
     font-size: 1.1rem;
   }
 
-  .customer-status {
-    width: 100%;
-    text-align: left;
+  .customer-time-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
   }
 
   .customer-actions {
     width: 100%;
-    flex-direction: column;
     gap: 0.75rem;
   }
 
   .action-btn {
-    width: 100%;
+    flex: 1;
     padding: 1rem;
     font-size: 1rem;
   }

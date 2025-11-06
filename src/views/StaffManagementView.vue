@@ -192,7 +192,35 @@ const handleInviteStaff = async () => {
     await loadStore()
   } catch (err: any) {
     console.error('초대 실패:', err)
-    alert(err.message || '招待に失敗しました。')
+
+    // Firebase Functions 에러 메시지 추출
+    let errorMessage = '招待に失敗しました。'
+
+    if (err.code) {
+      switch (err.code) {
+        case 'unauthenticated':
+          errorMessage = 'ログインが必要です。'
+          break
+        case 'permission-denied':
+          errorMessage = '権限がありません。オーナーのみスタッフを招待できます。'
+          break
+        case 'not-found':
+          errorMessage = '店舗が見つかりませんでした。'
+          break
+        case 'already-exists':
+          errorMessage = 'このメールアドレスは既に招待されています。'
+          break
+        case 'invalid-argument':
+          errorMessage = 'メールアドレスが無効です。'
+          break
+        default:
+          errorMessage = err.message || '招待に失敗しました。'
+      }
+    } else if (err.message) {
+      errorMessage = err.message
+    }
+
+    alert(errorMessage)
   } finally {
     isInviting.value = false
   }
