@@ -29,6 +29,7 @@ interface Store {
   address: string
   phoneNumber: string
   status?: string
+  hasPendingRequest?: boolean
 }
 
 const stores = ref<Store[]>([])
@@ -63,13 +64,31 @@ const filteredStores = computed(() => {
 const loadStores = async () => {
   isLoadingStores.value = true
   try {
+    const user = auth.currentUser
+    if (!user) {
+      return
+    }
+
     const q = query(collection(db, 'stores'), where('status', '==', 'approved'))
     const snapshot = await getDocs(q)
+
+    // 현재 사용자의 모든 pending 요청 조회
+    const pendingRequestsQuery = query(
+      collection(db, 'storeJoinRequests'),
+      where('userId', '==', user.uid),
+      where('status', '==', 'pending')
+    )
+    const pendingRequestsSnapshot = await getDocs(pendingRequestsQuery)
+    const pendingStoreIds = new Set(
+      pendingRequestsSnapshot.docs.map(doc => doc.data().storeId)
+    )
+
     stores.value = snapshot.docs.map(
       (doc) =>
         ({
           id: doc.id,
           ...doc.data(),
+          hasPendingRequest: pendingStoreIds.has(doc.id),
         }) as Store,
     )
   } catch (error) {
@@ -149,7 +168,7 @@ const handleJoinStore = async (storeId: string) => {
         createdAt: serverTimestamp(),
       })
 
-      alert('参加リクエストを再送信しました。承認をお待ちください。')
+      alert('参加リクエストを送信しました。承認をお待ちください。')
       router.push('/dashboard')
       return
     }
@@ -276,8 +295,8 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
             <p class="address">📍 {{ store.address }}</p>
             <p class="phone">📞 {{ store.phoneNumber }}</p>
           </div>
-          <button @click="handleJoinStore(store.id)" :disabled="isSubmitting" class="join-button">
-            登録リクエストを送る
+          <button @click="handleJoinStore(store.id)" :disabled="isSubmitting || store.hasPendingRequest" class="join-button">
+            {{ store.hasPendingRequest ? '承認待ち' : '登録リクエストを送る' }}
           </button>
         </div>
 
