@@ -298,6 +298,28 @@ onMounted(() => {
             </button>
           </template>
         </div>
+
+        <!-- 고객 정보 -->
+        <div class="customer-info">
+          <img
+            :src="customer.pictureUrl || '/default-avatar.png'"
+            :alt="customer.displayName"
+            class="customer-avatar"
+          />
+          <div class="customer-details">
+            <h3 class="customer-name">{{ customer.displayName }}</h3>
+            <div class="customer-time-status">
+              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
+              <p v-if="customer.calledAt" class="customer-time">
+                呼出: {{ formatTimestamp(customer.calledAt) }}
+              </p>
+              <!-- 상태 (시간 옆으로 이동) -->
+              <span :class="['status-badge', getStatusClass(customer.status)]">
+                {{ getStatusLabel(customer.status) }}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -498,7 +520,7 @@ h1 {
 }
 
 .customer-time {
-  margin: 0.125rem 0;
+  margin: 0;
   font-size: 0.85rem;
   color: #666;
 }

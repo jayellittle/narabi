@@ -247,13 +247,16 @@ h1 {
 }
 
 .qr-image-wrapper {
-  display: inline-block;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   padding: 1rem;
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   margin: 0 auto 1rem;
   max-width: 100%;
+  width: fit-content;
 }
 
 .qr-image-wrapper canvas {
