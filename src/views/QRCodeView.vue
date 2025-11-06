@@ -252,14 +252,15 @@ h1 {
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  margin-bottom: 1rem;
+  margin: 0 auto 1rem;
   max-width: 100%;
 }
 
 .qr-image-wrapper canvas {
   display: block;
+  width: 300px !important;
+  height: 300px !important;
   max-width: 100%;
-  height: auto !important;
 }
 
 .qr-instruction {
@@ -443,6 +444,14 @@ h1 {
 
   .qr-image-wrapper {
     padding: 0.75rem;
+    max-width: calc(100vw - 4rem);
+    box-sizing: border-box;
+  }
+
+  .qr-image-wrapper canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 250px;
   }
 
   .info-card {
