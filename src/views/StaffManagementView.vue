@@ -327,9 +327,6 @@ onMounted(() => {
               <div class="staff-icon">👤</div>
               <div class="staff-details">
                 <div class="staff-email">{{ staff.email }}</div>
-                <div class="staff-meta">
-                  {{ getRoleLabel(staff.role) }} • 招待: {{ formatTimestamp(staff.invitedAt) }}
-                </div>
               </div>
             </div>
 
@@ -348,7 +345,6 @@ onMounted(() => {
                 拒否
               </button>
             </div>
-            <div v-else class="pending-label">承認待ち</div>
           </div>
         </div>
       </section>

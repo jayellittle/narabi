@@ -15,12 +15,27 @@
         <div class="store-section">
           <h3>店舗一覧</h3>
 
-          <div v-if="approvedStores.length === 0 && pendingStores.length === 0" class="no-stores">
+          <div v-if="approvedStores.length === 0 && pendingStores.length === 0 && invitationPendingStores.length === 0" class="no-stores">
             <p>登録された店舗がありません。</p>
             <button @click="goToRegisterStore" class="primary-btn">+ 店舗を登録</button>
           </div>
 
           <div v-else class="store-list">
+            <!-- 초대 대기 중 (먼저 표시) -->
+            <div
+              v-for="store in invitationPendingStores"
+              :key="store.id"
+              :class="['store-item', 'invitation-pending', { active: selectedStoreId === store.id }]"
+              @click="selectStore(store.id)"
+            >
+              <div class="store-icon">📩</div>
+              <div class="store-info">
+                <div class="store-name">{{ store.name }}</div>
+                <div class="invitation-label">招待待ち - クリックして承認</div>
+              </div>
+            </div>
+
+            <!-- 승인된 매장 -->
             <div
               v-for="store in approvedStores"
               :key="store.id"
@@ -34,7 +49,7 @@
               </div>
             </div>
 
-            <!-- 승인 대기 중 -->
+            <!-- 관리자 승인 대기 중 -->
             <div v-for="store in pendingStores" :key="store.id" class="store-item pending">
               <div class="store-icon">⏳</div>
               <div class="store-info">
@@ -95,9 +110,14 @@ const approvedStores = computed(() => {
   return myStores.value.filter((s) => s.status === 'approved' || !s.status)
 })
 
-// 승인 대기 중인 매장
+// 승인 대기 중인 매장 (오너가 등록한 매장이 관리자 승인 대기 중)
 const pendingStores = computed(() => {
   return myStores.value.filter((s) => s.status === 'pending')
+})
+
+// 초대 대기 중인 매장 (내가 스태프로 초대받아서 승인 대기 중)
+const invitationPendingStores = computed(() => {
+  return myStores.value.filter((s) => s.status === 'invitation-pending')
 })
 
 // 매장 로드 - 오너 + 스태프로 등록된 매장 모두 가져오기
@@ -130,22 +150,22 @@ const loadStores = async () => {
       })
     })
 
-    // 스태프로 등록된 매장 추가
+    // 스태프로 등록된 매장 추가 (active 또는 pending)
     allStoresSnapshot.docs.forEach((doc) => {
       const data = doc.data()
       const staffList = data.staffList || []
 
-      // staffList에서 내 이메일이 active 상태인지 확인
-      const isStaff = staffList.some(
-        (staff: any) => staff.email === user.email && staff.status === 'active',
+      // staffList에서 내 이메일이 있는지 확인 (active 또는 pending)
+      const myStaffEntry = staffList.find(
+        (staff: any) => staff.email === user.email && (staff.status === 'active' || staff.status === 'pending'),
       )
 
-      if (isStaff && !storesMap.has(doc.id)) {
+      if (myStaffEntry && !storesMap.has(doc.id)) {
         storesMap.set(doc.id, {
           id: doc.id,
           name: data.name as string,
           address: data.address as string,
-          status: (data.status as string) || 'approved',
+          status: myStaffEntry.status === 'pending' ? 'invitation-pending' : ((data.status as string) || 'approved'),
         })
       }
     })
@@ -169,7 +189,14 @@ const loadStores = async () => {
 // 매장 선택
 const selectStore = (storeId: string) => {
   selectedStoreId.value = storeId
-  router.push(`/store/${storeId}`)
+
+  // 초대 대기 중인 매장은 스태프 관리 페이지로 직접 이동
+  const store = myStores.value.find((s) => s.id === storeId)
+  if (store?.status === 'invitation-pending') {
+    router.push(`/store/${storeId}/staff`)
+  } else {
+    router.push(`/store/${storeId}`)
+  }
 }
 
 // 로그아웃
@@ -313,6 +340,21 @@ onMounted(() => {
   cursor: default;
 }
 
+.store-item.invitation-pending {
+  background-color: #fff3e0;
+  border-left: 3px solid #ff9800;
+  cursor: pointer;
+  opacity: 1;
+}
+
+.store-item.invitation-pending:hover {
+  background-color: #ffe0b2;
+}
+
+.store-item.invitation-pending.active {
+  background-color: #ffcc80;
+}
+
 .store-icon {
   font-size: 1.5rem;
 }
@@ -343,6 +385,13 @@ onMounted(() => {
   font-size: 0.75rem;
   color: #ff9800;
   margin-top: 0.25rem;
+}
+
+.invitation-label {
+  font-size: 0.75rem;
+  color: #f57c00;
+  margin-top: 0.25rem;
+  font-weight: 500;
 }
 
 .add-store-btn {
