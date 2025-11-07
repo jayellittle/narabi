@@ -460,7 +460,7 @@ export const inviteStaff = functions
             email,
             role: role || 'staff',
             status: 'pending',
-            invitedAt: new Date(),
+            invitedAt: admin.firestore.Timestamp.now(),
           }),
         })
 

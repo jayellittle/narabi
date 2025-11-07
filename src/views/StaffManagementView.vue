@@ -544,6 +544,11 @@ h1 {
   background: #e9ecef;
 }
 
+/* PC에서도 현재 사용자 강조 */
+.staff-card.is-current-user {
+  border: 3px solid #4caf50;
+}
+
 .staff-info {
   display: flex;
   align-items: center;
@@ -583,7 +588,7 @@ h1 {
   font-weight: normal;
 }
 
-/* PC에서는 you-badge 표시, 모바일에서는 숨김 */
+/* 모바일에서는 you-badge 숨김 (::before 의사 요소로 대체) */
 @media (max-width: 768px) {
   .you-badge {
     display: none;
@@ -603,12 +608,13 @@ h1 {
   gap: 0.5rem;
 }
 
-.staff-status,
 .pending-label {
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
+  background-color: #fff3e0;
+  color: #e65100;
 }
 
 .remove-btn {
@@ -624,21 +630,6 @@ h1 {
 .remove-btn:hover {
   transform: scale(1.2);
   opacity: 1;
-}
-
-.staff-status.active {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.staff-status.rejected {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.pending-label {
-  background-color: #fff3e0;
-  color: #e65100;
 }
 
 /* 스태프 액션 */
@@ -837,14 +828,14 @@ h1 {
   /* 모바일에서 현재 사용자 강조 */
   .staff-card.is-current-user {
     border: 3px solid #4caf50;
-    padding-top: 2rem;
+    padding-bottom: 2rem;
   }
 
-  .staff-card.is-current-user::before {
+  .staff-card.is-current-user::after {
     content: 'あなた';
     position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
+    bottom: 0.5rem;
+    right: 0.5rem;
     background: #4caf50;
     color: white;
     padding: 0.25rem 0.75rem;
