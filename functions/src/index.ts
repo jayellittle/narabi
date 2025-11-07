@@ -476,7 +476,7 @@ export const inviteStaff = functions
         throw error
       }
       const errorMessage = error instanceof Error ? error.message : String(error)
-      logger.error('스태프 초대 실패:', errorMessage)
+      logger.error('스태프 초대 실패', { error: errorMessage, storeId, email })
       throw new functions.https.HttpsError('internal', 'スタッフ招待に失敗しました。')
     }
   })

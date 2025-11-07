@@ -148,8 +148,7 @@ onMounted(() => {
           <qrcode-vue :value="qrCodeUrl" :size="300" level="H" render-as="canvas" />
         </div>
         <p class="qr-instruction">
-          お客様にこのQRコードをスキャンしていただくと、<br />
-          順番待ちリストに登録されます。
+          お客様にこのQRコードをスキャンしていただくと、順番待ちリストに登録されます。
         </p>
       </div>
 
@@ -257,6 +256,7 @@ h1 {
   margin: 0 auto 1rem;
   max-width: 100%;
   width: fit-content;
+  box-sizing: border-box;
 }
 
 .qr-image-wrapper canvas {
@@ -264,6 +264,7 @@ h1 {
   width: 300px !important;
   height: 300px !important;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .qr-instruction {
@@ -271,6 +272,9 @@ h1 {
   font-size: 0.9rem;
   line-height: 1.6;
   margin: 1rem 0 0 0;
+  word-wrap: break-word;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* 대기 정보 */
