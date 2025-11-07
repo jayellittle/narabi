@@ -31,7 +31,7 @@
               <div class="store-icon">📩</div>
               <div class="store-info">
                 <div class="store-name">{{ store.name }}</div>
-                <div class="invitation-label">招待待ち - クリックして承認</div>
+                <div class="invitation-label">招待承認待ち - クリックして確認</div>
               </div>
             </div>
 

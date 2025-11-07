@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useFirebase, useTimeFormat } from '../composables/useFirebase'
 import { getAuth } from 'firebase/auth'
 import {
@@ -17,6 +17,7 @@ import {
 import type { Store, StaffMember } from '../types'
 
 const route = useRoute()
+const router = useRouter()
 const auth = getAuth()
 const db = getFirestore()
 const { getStore, inviteStaff, respondToInvitation } = useFirebase()
@@ -73,6 +74,22 @@ const pendingJoinRequests = computed(() => {
 // 현재 사용자가 오너인지 확인
 const isOwner = computed(() => {
   return store.value?.ownerId === currentUser.value?.uid
+})
+
+// 현재 사용자가 pending 상태인지 확인
+const isCurrentUserPending = computed(() => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+  return myStaffEntry?.status === 'pending'
+})
+
+// 현재 사용자가 active 상태인지 확인
+const isCurrentUserActive = computed(() => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+  return myStaffEntry?.status === 'active' || isOwner.value
 })
 
 // 역할 라벨
@@ -260,6 +277,28 @@ const handleRemoveStaff = async (staffEmail: string) => {
   }
 }
 
+// 초대 승인/거절 핸들러
+const handleRespondToInvitation = async (accepted: boolean) => {
+  try {
+    await respondToInvitation(storeId.value, accepted)
+
+    if (accepted) {
+      alert('招待を承認しました。ページを再読み込みします。')
+      // Dashboard로 리디렉션 후 다시 해당 스토어로 이동
+      router.push('/dashboard')
+      setTimeout(() => {
+        router.push(`/store/${storeId.value}`)
+      }, 100)
+    } else {
+      alert('招待を拒否しました。')
+      router.push('/dashboard')
+    }
+  } catch (err: any) {
+    console.error('초대 응답 실패:', err)
+    alert(err.message || '招待への応答に失敗しました。')
+  }
+}
+
 onMounted(() => {
   loadStore()
 })
@@ -284,73 +323,110 @@ onMounted(() => {
 
     <!-- 스태프 목록 -->
     <div v-else class="staff-sections">
-      <!-- 참여 요청 (storeJoinRequests 컬렉션에서) -->
-      <section v-if="isOwner && pendingJoinRequests.length > 0" class="staff-section join-requests">
-        <h2>参加リクエスト ({{ pendingJoinRequests.length }})</h2>
-        <div class="staff-list">
-          <div v-for="request in pendingJoinRequests" :key="request.id" class="staff-card">
-            <div class="staff-info">
-              <div class="staff-icon">📩</div>
-              <div class="staff-details">
-                <div class="staff-email">{{ request.userEmail }}</div>
-                <div class="staff-meta" v-if="request.message">
-                  メッセージ: {{ request.message }}
+      <!-- pending 사용자인 경우: 자신의 초대만 표시 -->
+      <template v-if="isCurrentUserPending">
+        <section class="staff-section pending">
+          <h2>招待承認</h2>
+          <div class="staff-list">
+            <div v-for="staff in pendingStaff.filter(s => s.email === currentUserEmail)" :key="staff.email" class="staff-card">
+              <div class="staff-info">
+                <div class="staff-icon">👤</div>
+                <div class="staff-details">
+                  <div class="staff-email">{{ staff.email }}</div>
                 </div>
-                <div class="staff-meta">送信: {{ formatTimestamp(request.createdAt) }}</div>
+              </div>
+
+              <div class="staff-actions">
+                <button
+                  @click="() => handleRespondToInvitation(true)"
+                  class="action-btn approve-btn"
+                >
+                  承認
+                </button>
+                <button
+                  @click="() => handleRespondToInvitation(false)"
+                  class="action-btn reject-btn"
+                >
+                  拒否
+                </button>
               </div>
             </div>
-
-            <div class="staff-actions">
-              <button
-                @click="() => handleJoinRequest(request.id, true, request.userEmail)"
-                class="action-btn approve-btn"
-              >
-                承認
-              </button>
-              <button
-                @click="() => handleJoinRequest(request.id, false, request.userEmail)"
-                class="action-btn reject-btn"
-              >
-                拒否
-              </button>
-            </div>
           </div>
+        </section>
+        <div class="permission-notice">
+          ℹ️ 招待を承認すると、他のスタッフの情報を確認できるようになります。
         </div>
-      </section>
+      </template>
 
-      <!-- 승인 대기 중 (staffList에서) -->
-      <section v-if="pendingStaff.length > 0" class="staff-section pending">
-        <h2>承認待ち ({{ pendingStaff.length }})</h2>
-        <div class="staff-list">
-          <div v-for="staff in pendingStaff" :key="staff.email" class="staff-card">
-            <div class="staff-info">
-              <div class="staff-icon">👤</div>
-              <div class="staff-details">
-                <div class="staff-email">{{ staff.email }}</div>
+      <!-- active 사용자인 경우: 전체 스태프 목록 표시 -->
+      <template v-else>
+        <!-- 참여 요청 (storeJoinRequests 컬렉션에서) -->
+        <section v-if="isOwner && pendingJoinRequests.length > 0" class="staff-section join-requests">
+          <h2>参加リクエスト ({{ pendingJoinRequests.length }})</h2>
+          <div class="staff-list">
+            <div v-for="request in pendingJoinRequests" :key="request.id" class="staff-card">
+              <div class="staff-info">
+                <div class="staff-icon">📩</div>
+                <div class="staff-details">
+                  <div class="staff-email">{{ request.userEmail }}</div>
+                  <div class="staff-meta" v-if="request.message">
+                    メッセージ: {{ request.message }}
+                  </div>
+                  <div class="staff-meta">送信: {{ formatTimestamp(request.createdAt) }}</div>
+                </div>
+              </div>
+
+              <div class="staff-actions">
+                <button
+                  @click="() => handleJoinRequest(request.id, true, request.userEmail)"
+                  class="action-btn approve-btn"
+                >
+                  承認
+                </button>
+                <button
+                  @click="() => handleJoinRequest(request.id, false, request.userEmail)"
+                  class="action-btn reject-btn"
+                >
+                  拒否
+                </button>
               </div>
             </div>
+          </div>
+        </section>
 
-            <!-- 본인 초대인 경우에만 액션 버튼 표시 -->
-            <div v-if="staff.email === currentUserEmail" class="staff-actions">
-              <button
-                @click="() => respondToInvitation(storeId, true)"
-                class="action-btn approve-btn"
-              >
-                承認
-              </button>
-              <button
-                @click="() => respondToInvitation(storeId, false)"
-                class="action-btn reject-btn"
-              >
-                拒否
-              </button>
+        <!-- 승인 대기 중 (staffList에서) -->
+        <section v-if="pendingStaff.length > 0" class="staff-section pending">
+          <h2>承認待ち ({{ pendingStaff.length }})</h2>
+          <div class="staff-list">
+            <div v-for="staff in pendingStaff" :key="staff.email" class="staff-card">
+              <div class="staff-info">
+                <div class="staff-icon">👤</div>
+                <div class="staff-details">
+                  <div class="staff-email">{{ staff.email }}</div>
+                </div>
+              </div>
+
+              <!-- 본인 초대인 경우에만 액션 버튼 표시 -->
+              <div v-if="staff.email === currentUserEmail" class="staff-actions">
+                <button
+                  @click="() => handleRespondToInvitation(true)"
+                  class="action-btn approve-btn"
+                >
+                  承認
+                </button>
+                <button
+                  @click="() => handleRespondToInvitation(false)"
+                  class="action-btn reject-btn"
+                >
+                  拒否
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <!-- 활성 스태프 -->
-      <section class="staff-section active">
+        <!-- 활성 스태프 -->
+        <section class="staff-section active">
         <h2>スタッフ ({{ activeStaff.length }})</h2>
         <div v-if="activeStaff.length === 0" class="no-staff">
           現在アクティブなスタッフはいません。
@@ -390,9 +466,9 @@ onMounted(() => {
         </div>
       </section>
 
-
-      <!-- 권한 안내 -->
-      <div v-if="!isOwner" class="permission-notice">ℹ️ スタッフの招待はオーナーのみ可能です。</div>
+        <!-- 권한 안내 -->
+        <div v-if="!isOwner" class="permission-notice">ℹ️ スタッフの招待はオーナーのみ可能です。</div>
+      </template>
     </div>
 
     <!-- 초대 모달 -->
@@ -844,12 +920,12 @@ h1 {
 
   .staff-actions {
     width: 100%;
-    flex-direction: column;
-    gap: 0.75rem;
+    flex-direction: row;
+    gap: 0.5rem;
   }
 
   .action-btn {
-    width: 100%;
+    flex: 1;
     padding: 0.75rem;
     font-size: 1rem;
   }
