@@ -452,8 +452,6 @@ export const inviteStaff = functions
       }
 
       // 스태프 추가
-      const now = admin.firestore.Timestamp.now()
-
       await db
         .collection('stores')
         .doc(storeId)
@@ -462,7 +460,7 @@ export const inviteStaff = functions
             email,
             role: role || 'staff',
             status: 'pending',
-            invitedAt: now,
+            invitedAt: new Date(),
           }),
         })
 

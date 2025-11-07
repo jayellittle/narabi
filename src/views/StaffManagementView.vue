@@ -360,7 +360,12 @@ onMounted(() => {
           現在アクティブなスタッフはいません。
         </div>
         <div v-else class="staff-list">
-          <div v-for="staff in activeStaff" :key="staff.email" class="staff-card">
+          <div
+            v-for="staff in activeStaff"
+            :key="staff.email"
+            class="staff-card"
+            :class="{ 'is-current-user': staff.email === currentUserEmail }"
+          >
             <div class="staff-info">
               <div class="staff-icon">
                 {{ staff.role === 'owner' ? '👑' : '👤' }}
@@ -371,7 +376,7 @@ onMounted(() => {
                   <span v-if="staff.email === currentUserEmail" class="you-badge"> (あなた) </span>
                 </div>
                 <div class="staff-meta">
-                  {{ getRoleLabel(staff.role) }} • 参加: {{ formatTimestamp(staff.invitedAt) }}
+                  {{ getRoleLabel(staff.role) }}
                 </div>
               </div>
             </div>
@@ -595,6 +600,13 @@ h1 {
   font-size: 0.75rem;
   border-radius: 12px;
   font-weight: normal;
+}
+
+/* PC에서는 you-badge 표시, 모바일에서는 숨김 */
+@media (max-width: 768px) {
+  .you-badge {
+    display: none;
+  }
 }
 
 .staff-meta {
@@ -838,6 +850,26 @@ h1 {
     align-items: flex-start;
     gap: 1rem;
     padding: 1.25rem;
+    position: relative;
+  }
+
+  /* 모바일에서 현재 사용자 강조 */
+  .staff-card.is-current-user {
+    border: 3px solid #4caf50;
+    padding-top: 2rem;
+  }
+
+  .staff-card.is-current-user::before {
+    content: 'あなた';
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    background: #4caf50;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    font-weight: 500;
   }
 
   .staff-info {
