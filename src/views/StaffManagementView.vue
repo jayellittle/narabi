@@ -376,7 +376,6 @@ onMounted(() => {
               </div>
             </div>
             <div class="staff-actions-row">
-              <div class="staff-status active">アクティブ</div>
               <button
                 v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
                 @click="() => handleRemoveStaff(staff.email)"
@@ -390,24 +389,6 @@ onMounted(() => {
         </div>
       </section>
 
-      <!-- 거절된 스태프 (오너만 보임) -->
-      <section v-if="isOwner && rejectedStaff.length > 0" class="staff-section rejected">
-        <h2>拒否済み ({{ rejectedStaff.length }})</h2>
-        <div class="staff-list">
-          <div v-for="staff in rejectedStaff" :key="staff.email" class="staff-card">
-            <div class="staff-info">
-              <div class="staff-icon">👤</div>
-              <div class="staff-details">
-                <div class="staff-email">{{ staff.email }}</div>
-                <div class="staff-meta">
-                  {{ getRoleLabel(staff.role) }}
-                </div>
-              </div>
-            </div>
-            <div class="staff-status rejected">拒否済み</div>
-          </div>
-        </div>
-      </section>
 
       <!-- 권한 안내 -->
       <div v-if="!isOwner" class="permission-notice">ℹ️ スタッフの招待はオーナーのみ可能です。</div>

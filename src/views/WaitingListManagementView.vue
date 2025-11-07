@@ -245,14 +245,14 @@ onMounted(() => {
             class="customer-avatar"
           />
           <div class="customer-details">
-            <h3 class="customer-name">{{ customer.displayName }}</h3>
+            <div class="customer-name-row">
+              <h3 class="customer-name">{{ customer.displayName }}</h3>
+              <span :class="['status-badge', getStatusClass(customer.status)]">
+                {{ getStatusLabel(customer.status) }}
+              </span>
+            </div>
             <div class="customer-time-status">
-              <p class="customer-time">
-                登録: {{ formatTimestamp(customer.createdAt) }}
-                <span :class="['status-badge', getStatusClass(customer.status)]">
-                  {{ getStatusLabel(customer.status) }}
-                </span>
-              </p>
+              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
               <p v-if="customer.calledAt" class="customer-time">
                 呼出: {{ formatTimestamp(customer.calledAt) }}
               </p>
@@ -479,8 +479,16 @@ h1 {
   min-width: 0;
 }
 
+.customer-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .customer-name {
-  margin: 0 0 0.5rem 0;
+  margin: 0;
   font-size: 1.2rem;
   color: #333;
 }
@@ -495,9 +503,6 @@ h1 {
   margin: 0;
   font-size: 0.85rem;
   color: #666;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
 }
 
 .status-badge {
@@ -692,6 +697,10 @@ h1 {
     height: 50px;
   }
 
+  .customer-name-row {
+    flex-wrap: wrap;
+  }
+
   .customer-name {
     font-size: 1.1rem;
   }
@@ -706,7 +715,6 @@ h1 {
 
   .status-badge {
     display: inline-block;
-    margin-left: 0.5rem;
     padding: 0.25rem 0.75rem;
     font-size: 0.8rem;
   }
