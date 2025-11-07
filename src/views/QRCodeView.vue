@@ -447,14 +447,15 @@ h1 {
 
   .qr-image-wrapper {
     padding: 0.75rem;
-    max-width: calc(100vw - 4rem);
+    margin-left: auto;
+    margin-right: auto;
     box-sizing: border-box;
   }
 
   .qr-image-wrapper canvas {
-    width: 100% !important;
-    height: auto !important;
-    max-width: 250px;
+    width: 250px !important;
+    height: 250px !important;
+    max-width: 100%;
   }
 
   .info-card {

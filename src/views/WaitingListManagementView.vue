@@ -247,15 +247,15 @@ onMounted(() => {
           <div class="customer-details">
             <h3 class="customer-name">{{ customer.displayName }}</h3>
             <div class="customer-time-status">
-              <div class="time-info">
-                <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
-                <p v-if="customer.calledAt" class="customer-time">
-                  呼出: {{ formatTimestamp(customer.calledAt) }}
-                </p>
-              </div>
-              <span :class="['status-badge', getStatusClass(customer.status)]">
-                {{ getStatusLabel(customer.status) }}
-              </span>
+              <p class="customer-time">
+                登録: {{ formatTimestamp(customer.createdAt) }}
+                <span :class="['status-badge', getStatusClass(customer.status)]">
+                  {{ getStatusLabel(customer.status) }}
+                </span>
+              </p>
+              <p v-if="customer.calledAt" class="customer-time">
+                呼出: {{ formatTimestamp(customer.calledAt) }}
+              </p>
             </div>
           </div>
         </div>
@@ -297,28 +297,6 @@ onMounted(() => {
               ❌ 取消
             </button>
           </template>
-        </div>
-
-        <!-- 고객 정보 -->
-        <div class="customer-info">
-          <img
-            :src="customer.pictureUrl || '/default-avatar.png'"
-            :alt="customer.displayName"
-            class="customer-avatar"
-          />
-          <div class="customer-details">
-            <h3 class="customer-name">{{ customer.displayName }}</h3>
-            <div class="customer-time-status">
-              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
-              <p v-if="customer.calledAt" class="customer-time">
-                呼出: {{ formatTimestamp(customer.calledAt) }}
-              </p>
-              <!-- 상태 (시간 옆으로 이동) -->
-              <span :class="['status-badge', getStatusClass(customer.status)]">
-                {{ getStatusLabel(customer.status) }}
-              </span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -509,28 +487,26 @@ h1 {
 
 .customer-time-status {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.time-info {
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .customer-time {
   margin: 0;
   font-size: 0.85rem;
   color: #666;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-size: 0.9rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .status-waiting {
@@ -650,7 +626,7 @@ h1 {
 
   .customer-card {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 1rem;
     padding: 1.25rem;
   }
@@ -663,18 +639,51 @@ h1 {
   .mobile-actions {
     display: flex !important;
     gap: 0.5rem;
+    flex: 1;
+  }
+
+  /* 모바일: 순번과 버튼을 같은 행에 */
+  .customer-card > .queue-number,
+  .customer-card > .mobile-actions {
+    display: flex;
+  }
+
+  .customer-card > .queue-number {
+    flex-shrink: 0;
+  }
+
+  .customer-card > .mobile-actions {
+    flex: 1;
+  }
+
+  /* 순번과 버튼을 감싸는 래퍼 스타일 (DOM 구조 변경 없이 flexbox로 처리) */
+  .customer-card {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 1rem;
   }
 
   .queue-number {
-    min-width: 60px;
-    height: 60px;
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 50px;
+    height: 50px;
   }
 
   .queue-number .number {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+  }
+
+  .mobile-actions {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: center;
   }
 
   .customer-info {
+    grid-column: 1 / -1;
+    grid-row: 2;
     width: 100%;
   }
 
@@ -688,9 +697,18 @@ h1 {
   }
 
   .customer-time-status {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
+    display: block;
+  }
+
+  .customer-time {
+    display: block;
+  }
+
+  .status-badge {
+    display: inline-block;
+    margin-left: 0.5rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
   }
 
   .action-btn {
@@ -711,12 +729,17 @@ h1 {
   }
 
   .queue-number {
-    min-width: 60px;
-    height: 60px;
+    min-width: 45px;
+    height: 45px;
   }
 
   .queue-number .number {
-    font-size: 1.6rem;
+    font-size: 1.3rem;
+  }
+
+  .action-btn {
+    padding: 0.6rem 0.4rem;
+    font-size: 0.8rem;
   }
 }
 </style>
