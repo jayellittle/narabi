@@ -442,7 +442,7 @@ h1 {
   }
 
   .qr-display {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .qr-display h2 {
@@ -459,8 +459,8 @@ h1 {
   }
 
   .qr-image-wrapper canvas {
-    width: 250px !important;
-    height: 250px !important;
+    width: 220px !important;
+    height: 220px !important;
     max-width: 100%;
   }
 

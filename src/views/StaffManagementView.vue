@@ -538,6 +538,7 @@ h1 {
   background: #f8f9fa;
   border-radius: 8px;
   transition: background 0.3s;
+  position: relative;
 }
 
 .staff-card:hover {
@@ -547,6 +548,20 @@ h1 {
 /* PC에서도 현재 사용자 강조 */
 .staff-card.is-current-user {
   border: 3px solid #4caf50;
+  padding-bottom: 2.5rem;
+}
+
+.staff-card.is-current-user::after {
+  content: 'あなた';
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: #4caf50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .staff-info {
@@ -577,22 +592,9 @@ h1 {
   margin-bottom: 0.25rem;
 }
 
+/* you-badge는 ::after 의사 요소로 대체하므로 숨김 */
 .you-badge {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.125rem 0.5rem;
-  background-color: #4caf50;
-  color: white;
-  font-size: 0.75rem;
-  border-radius: 12px;
-  font-weight: normal;
-}
-
-/* 모바일에서는 you-badge 숨김 (::before 의사 요소로 대체) */
-@media (max-width: 768px) {
-  .you-badge {
-    display: none;
-  }
+  display: none;
 }
 
 .staff-meta {
@@ -825,23 +827,9 @@ h1 {
     position: relative;
   }
 
-  /* 모바일에서 현재 사용자 강조 */
+  /* 모바일에서 현재 사용자 카드의 하단 패딩 조정 */
   .staff-card.is-current-user {
-    border: 3px solid #4caf50;
     padding-bottom: 2rem;
-  }
-
-  .staff-card.is-current-user::after {
-    content: 'あなた';
-    position: absolute;
-    bottom: 0.5rem;
-    right: 0.5rem;
-    background: #4caf50;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 500;
   }
 
   .staff-info {
