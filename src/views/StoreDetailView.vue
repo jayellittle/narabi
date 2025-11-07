@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getFirestore, doc, getDoc } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
@@ -149,11 +149,36 @@ onMounted(async () => {
   }
 })
 
+// pending ユーザーがアクセスできないページへの遷移を防ぐ
+watch(
+  () => [route.path, isCurrentUserPending.value],
+  ([currentPath, isPending]) => {
+    if (isPending && store.value) {
+      const restrictedPaths = [
+        `/store/${storeId}`,
+        `/store/${storeId}/qr`,
+        `/store/${storeId}/waiting`,
+      ]
+
+      if (restrictedPaths.includes(currentPath as string)) {
+        alert('招待を承認すると全てのメニューにアクセスできます。')
+        router.replace(`/store/${storeId}/staff`)
+      }
+    }
+  },
+  { immediate: true }
+)
+
 const goBack = () => {
   router.push('/dashboard')
 }
 
 const goToMenu = () => {
+  // pending ユーザーはメニューページにアクセスできない
+  if (isCurrentUserPending.value) {
+    alert('招待を承認すると全てのメニューにアクセスできます。')
+    return
+  }
   router.push(`/store/${storeId}`)
 }
 </script>

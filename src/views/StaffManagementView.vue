@@ -92,6 +92,12 @@ const isCurrentUserActive = computed(() => {
   return myStaffEntry?.status === 'active' || isOwner.value
 })
 
+// 오너가 탈퇴 가능한지 확인 (다른 오너가 있는지)
+const canOwnerLeave = computed(() => {
+  const owners = activeStaff.value.filter((s) => s.role === 'owner')
+  return owners.length > 1
+})
+
 // 역할 라벨
 const getRoleLabel = (role: string): string => {
   const labels: Record<string, string> = {
@@ -299,6 +305,34 @@ const handleRespondToInvitation = async (accepted: boolean) => {
   }
 }
 
+// 탈퇴 핸들러
+const handleLeaveStore = async () => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+
+  if (!myStaffEntry) return
+
+  // 오너인 경우 다른 오너가 있는지 확인
+  if (myStaffEntry.role === 'owner' && !canOwnerLeave.value) {
+    alert('他のオーナーがいないため、退店できません。')
+    return
+  }
+
+  if (!confirm('本当に退店しますか？')) {
+    return
+  }
+
+  try {
+    await handleRemoveStaff(currentUserEmail.value)
+    alert('退店しました。')
+    router.push('/dashboard')
+  } catch (err: any) {
+    console.error('탈퇴 실패:', err)
+    alert(err.message || '退店に失敗しました。')
+  }
+}
+
 onMounted(() => {
   loadStore()
 })
@@ -447,20 +481,32 @@ onMounted(() => {
                   {{ staff.email }}
                   <span v-if="staff.email === currentUserEmail" class="you-badge"> (あなた) </span>
                 </div>
-                <div class="staff-meta">
-                  {{ getRoleLabel(staff.role) }}
+                <div class="staff-meta-row">
+                  <div class="staff-meta">
+                    {{ getRoleLabel(staff.role) }}
+                  </div>
+                  <div class="staff-actions-inline">
+                    <!-- 오너가 다른 스태프 제거 -->
+                    <button
+                      v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
+                      @click="() => handleRemoveStaff(staff.email)"
+                      class="remove-btn"
+                      title="スタッフを削除"
+                    >
+                      🗑️
+                    </button>
+                    <!-- 본인이 탈퇴 (오너는 다른 오너가 있을 때만) -->
+                    <button
+                      v-if="staff.email === currentUserEmail && (staff.role !== 'owner' || canOwnerLeave)"
+                      @click="() => handleLeaveStore()"
+                      class="leave-btn"
+                      title="退店"
+                    >
+                      🚪
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="staff-actions-row">
-              <button
-                v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
-                @click="() => handleRemoveStaff(staff.email)"
-                class="remove-btn"
-                title="スタッフを削除"
-              >
-                🗑️
-              </button>
             </div>
           </div>
         </div>
@@ -672,7 +718,19 @@ h1 {
 .staff-meta {
   font-size: 0.85rem;
   color: #666;
+}
+
+.staff-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 0.25rem;
+}
+
+.staff-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* 스태프 상태 */
@@ -691,7 +749,8 @@ h1 {
   color: #e65100;
 }
 
-.remove-btn {
+.remove-btn,
+.leave-btn {
   padding: 0.5rem;
   background-color: transparent;
   border: none;
@@ -701,7 +760,8 @@ h1 {
   opacity: 0.6;
 }
 
-.remove-btn:hover {
+.remove-btn:hover,
+.leave-btn:hover {
   transform: scale(1.2);
   opacity: 1;
 }

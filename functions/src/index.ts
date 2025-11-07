@@ -512,10 +512,19 @@ export const respondToStaffInvitation = functions
 
       // 스태프 상태 업데이트
       const updatedStaffList = [...(storeData.staffList || [])]
-      updatedStaffList[staffIndex] = {
-        ...updatedStaffList[staffIndex],
-        status: accepted ? 'active' : 'rejected',
-        userId: accepted ? context.auth.uid : undefined,
+      if (accepted) {
+        // 승인시: userId를 설정
+        updatedStaffList[staffIndex] = {
+          ...updatedStaffList[staffIndex],
+          status: 'active',
+          userId: context.auth.uid,
+        }
+      } else {
+        // 거절시: userId를 포함하지 않음
+        updatedStaffList[staffIndex] = {
+          ...updatedStaffList[staffIndex],
+          status: 'rejected',
+        }
       }
 
       await db.collection('stores').doc(storeId).update({
