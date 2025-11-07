@@ -307,17 +307,17 @@ onMounted(() => {
 .waiting-list-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem 2rem 2rem 2rem;
 }
 
 /* 헤더 */
 .header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 h1 {
   font-size: 2rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   color: #333;
 }
 
@@ -361,7 +361,7 @@ h1 {
 .filters {
   display: flex;
   gap: 0.5rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
   padding: 0.5rem;
   background: white;
   border-radius: 8px;

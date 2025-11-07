@@ -454,14 +454,13 @@ h1 {
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
-    max-width: calc(100vw - 5rem);
+    max-width: calc(100% - 3rem);
   }
 
   .qr-image-wrapper canvas {
     width: 100% !important;
     height: auto !important;
-    max-width: 250px !important;
-    aspect-ratio: 1 / 1;
+    max-width: 250px;
   }
 
   .info-card {
