@@ -459,8 +459,8 @@ h1 {
   }
 
   .qr-image-wrapper canvas {
-    width: 220px !important;
-    height: 220px !important;
+    width: 200px !important;
+    height: 200px !important;
     max-width: 100%;
   }
 
