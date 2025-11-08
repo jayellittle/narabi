@@ -520,9 +520,10 @@ export const respondToStaffInvitation = functions
           userId: context.auth.uid,
         }
       } else {
-        // 거절시: userId를 포함하지 않음
+        // 거절시: userId를 명시적으로 제거
+        const { userId, ...staffWithoutUserId } = updatedStaffList[staffIndex]
         updatedStaffList[staffIndex] = {
-          ...updatedStaffList[staffIndex],
+          ...staffWithoutUserId,
           status: 'rejected',
         }
       }

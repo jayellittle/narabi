@@ -174,9 +174,9 @@ const goBack = () => {
 }
 
 const goToMenu = () => {
-  // pending ユーザーはメニューページにアクセスできない
+  // pending ユーザーは店舗一覧に戻る
   if (isCurrentUserPending.value) {
-    alert('招待を承認すると全てのメニューにアクセスできます。')
+    router.push('/dashboard')
     return
   }
   router.push(`/store/${storeId}`)
