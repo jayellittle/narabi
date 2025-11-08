@@ -515,15 +515,18 @@ export const respondToStaffInvitation = functions
       if (accepted) {
         // 승인시: userId를 설정
         updatedStaffList[staffIndex] = {
-          ...updatedStaffList[staffIndex],
+          email: updatedStaffList[staffIndex].email,
+          role: updatedStaffList[staffIndex].role,
+          invitedAt: updatedStaffList[staffIndex].invitedAt,
           status: 'active',
           userId: context.auth.uid,
         }
       } else {
-        // 거절시: userId를 명시적으로 제거
-        const { userId, ...staffWithoutUserId } = updatedStaffList[staffIndex]
+        // 거절시: userId 없이 객체 생성
         updatedStaffList[staffIndex] = {
-          ...staffWithoutUserId,
+          email: updatedStaffList[staffIndex].email,
+          role: updatedStaffList[staffIndex].role,
+          invitedAt: updatedStaffList[staffIndex].invitedAt,
           status: 'rejected',
         }
       }
