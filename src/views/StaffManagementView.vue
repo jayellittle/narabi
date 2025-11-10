@@ -312,12 +312,11 @@ const handleAcceptInvitation = async () => {
     const displayNameToSend = invitationAcceptForm.value.displayName.trim() || undefined
     await respondToInvitation(storeId.value, true, displayNameToSend)
 
-    alert('招待を承認しました。ページを再読み込みします。')
     showInvitationAcceptModal.value = false
-    router.push('/dashboard')
-    setTimeout(() => {
-      router.push(`/store/${storeId.value}`)
-    }, 100)
+    alert('招待を承認しました。ページを再読み込みします。')
+
+    // Firestoreの更新を確実に反映するため、完全なページリロードを行う
+    window.location.href = `/store/${storeId.value}`
   } catch (err: any) {
     console.error('初대 승인 실패:', err)
     alert(err.message || '招待の承認に失敗しました。')
