@@ -49,6 +49,20 @@ const inviteForm = ref({
 })
 const isInviting = ref(false)
 
+// 표시명 편집 모달
+const showDisplayNameModal = ref(false)
+const displayNameForm = ref({
+  displayName: '',
+})
+const isUpdatingDisplayName = ref(false)
+
+// 초대 승인 시 표시명 입력 모달
+const showInvitationAcceptModal = ref(false)
+const invitationAcceptForm = ref({
+  displayName: '',
+})
+const isAcceptingInvitation = ref(false)
+
 // 현재 사용자 정보
 const currentUser = computed(() => auth.currentUser)
 const currentUserEmail = computed(() => currentUser.value?.email || '')
@@ -149,19 +163,20 @@ const loadStore = async () => {
 }
 
 // 참여 요청 승인/거절
-const handleJoinRequest = async (requestId: string, approved: boolean, userEmail: string) => {
+const handleJoinRequest = async (requestId: string, approved: boolean, userEmail: string, displayName?: string) => {
   try {
     const requestRef = doc(db, 'storeJoinRequests', requestId)
     const storeRef = doc(db, 'stores', storeId.value)
 
     if (approved) {
-      // 승인: staffList에 추가
+      // 승인: staffList에 추가 (displayName 포함)
       await updateDoc(storeRef, {
         staffList: arrayUnion({
           email: userEmail,
           role: 'staff',
           status: 'active',
           invitedAt: new Date(),
+          displayName: displayName || null,
         }),
       })
 
@@ -283,25 +298,94 @@ const handleRemoveStaff = async (staffEmail: string) => {
   }
 }
 
-// 초대 승인/거절 핸들러
-const handleRespondToInvitation = async (accepted: boolean) => {
-  try {
-    await respondToInvitation(storeId.value, accepted)
+// 초대 승인 모달 열기
+const openInvitationAcceptModal = () => {
+  invitationAcceptForm.value.displayName = ''
+  showInvitationAcceptModal.value = true
+}
 
-    if (accepted) {
+// 초대 승인 처리
+const handleAcceptInvitation = async () => {
+  if (!invitationAcceptForm.value.displayName.trim()) {
+    alert('表示名を入力してください。')
+    return
+  }
+
+  isAcceptingInvitation.value = true
+
+  try {
+    const storeRef = doc(db, 'stores', storeId.value)
+    const storeDoc = await getDoc(storeRef)
+
+    if (storeDoc.exists()) {
+      const staffList = storeDoc.data().staffList || []
+      const updatedStaffList = staffList.map((staff: any) =>
+        staff.email === currentUserEmail.value && staff.status === 'pending'
+          ? {
+              ...staff,
+              status: 'active',
+              userId: currentUser.value?.uid,
+              displayName: invitationAcceptForm.value.displayName.trim(),
+            }
+          : staff
+      )
+
+      await updateDoc(storeRef, {
+        staffList: updatedStaffList,
+      })
+
       alert('招待を承認しました。ページを再読み込みします。')
-      // Dashboard로 리디렉션 후 다시 해당 스토어로 이동
+      showInvitationAcceptModal.value = false
       router.push('/dashboard')
       setTimeout(() => {
         router.push(`/store/${storeId.value}`)
       }, 100)
-    } else {
+    }
+  } catch (err: any) {
+    console.error('초대 승인 실패:', err)
+    alert(err.message || '招待の承認に失敗しました。')
+  } finally {
+    isAcceptingInvitation.value = false
+  }
+}
+
+// 초대 거절 처리
+const handleRejectInvitation = async () => {
+  if (!confirm('招待を拒否しますか？')) {
+    return
+  }
+
+  try {
+    const storeRef = doc(db, 'stores', storeId.value)
+    const storeDoc = await getDoc(storeRef)
+
+    if (storeDoc.exists()) {
+      const staffList = storeDoc.data().staffList || []
+      const updatedStaffList = staffList.map((staff: any) =>
+        staff.email === currentUserEmail.value && staff.status === 'pending'
+          ? { ...staff, status: 'rejected' }
+          : staff
+      )
+
+      await updateDoc(storeRef, {
+        staffList: updatedStaffList,
+      })
+
       alert('招待を拒否しました。')
       router.push('/dashboard')
     }
   } catch (err: any) {
-    console.error('초대 응답 실패:', err)
-    alert(err.message || '招待への応答に失敗しました。')
+    console.error('초대 거절 실패:', err)
+    alert(err.message || '招待の拒否に失敗しました。')
+  }
+}
+
+// 초대 승인/거절 핸들러 (기존 함수는 사용하지 않음)
+const handleRespondToInvitation = async (accepted: boolean) => {
+  if (accepted) {
+    openInvitationAcceptModal()
+  } else {
+    await handleRejectInvitation()
   }
 }
 
@@ -333,6 +417,58 @@ const handleLeaveStore = async () => {
   }
 }
 
+// 표시명 편집 모달 열기
+const openDisplayNameModal = () => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+  displayNameForm.value.displayName = myStaffEntry?.displayName || ''
+  showDisplayNameModal.value = true
+}
+
+// 표시명 업데이트
+const handleUpdateDisplayName = async () => {
+  if (!displayNameForm.value.displayName.trim()) {
+    alert('表示名を入力してください。')
+    return
+  }
+
+  isUpdatingDisplayName.value = true
+
+  try {
+    const storeRef = doc(db, 'stores', storeId.value)
+    const storeDoc = await getDoc(storeRef)
+
+    if (storeDoc.exists()) {
+      const staffList = storeDoc.data().staffList || []
+      const updatedStaffList = staffList.map((staff: any) =>
+        staff.email === currentUserEmail.value
+          ? { ...staff, displayName: displayNameForm.value.displayName.trim() }
+          : staff
+      )
+
+      await updateDoc(storeRef, {
+        staffList: updatedStaffList,
+      })
+
+      alert('表示名を更新しました。')
+      showDisplayNameModal.value = false
+      await loadStore()
+    }
+  } catch (err: any) {
+    console.error('표시명 업데이트 실패:', err)
+    alert(err.message || '表示名の更新に失敗しました。')
+  } finally {
+    isUpdatingDisplayName.value = false
+  }
+}
+
+// 표시명 모달 취소
+const cancelDisplayName = () => {
+  displayNameForm.value.displayName = ''
+  showDisplayNameModal.value = false
+}
+
 onMounted(() => {
   loadStore()
 })
@@ -342,9 +478,14 @@ onMounted(() => {
   <div class="staff-management-container">
     <div class="header">
       <h1>スタッフ管理</h1>
-      <button v-if="isOwner" @click="showInviteModal = true" class="invite-button">
-        + 新規招待
-      </button>
+      <div class="header-buttons">
+        <button v-if="isCurrentUserActive" @click="openDisplayNameModal" class="display-name-button">
+          ✏️ 表示名編集
+        </button>
+        <button v-if="isOwner" @click="showInviteModal = true" class="invite-button">
+          + 新規招待
+        </button>
+      </div>
     </div>
 
     <!-- 로딩 -->
@@ -402,7 +543,8 @@ onMounted(() => {
               <div class="staff-info">
                 <div class="staff-icon">📩</div>
                 <div class="staff-details">
-                  <div class="staff-email">{{ request.userEmail }}</div>
+                  <div class="staff-name" v-if="request.displayName">{{ request.displayName }}</div>
+                  <div class="staff-email-small">{{ request.userEmail }}</div>
                   <div class="staff-meta" v-if="request.message">
                     メッセージ: {{ request.message }}
                   </div>
@@ -412,7 +554,7 @@ onMounted(() => {
 
               <div class="staff-actions">
                 <button
-                  @click="() => handleJoinRequest(request.id, true, request.userEmail)"
+                  @click="() => handleJoinRequest(request.id, true, request.userEmail, request.displayName)"
                   class="action-btn approve-btn"
                 >
                   承認
@@ -437,6 +579,7 @@ onMounted(() => {
                 <div class="staff-icon">👤</div>
                 <div class="staff-details">
                   <div class="staff-email">{{ staff.email }}</div>
+                  <div class="staff-meta">{{ getRoleLabel(staff.role) }}</div>
                 </div>
               </div>
 
@@ -477,10 +620,11 @@ onMounted(() => {
                 {{ staff.role === 'owner' ? '👑' : '👤' }}
               </div>
               <div class="staff-details">
-                <div class="staff-email">
-                  {{ staff.email }}
+                <div class="staff-name">
+                  {{ staff.displayName || staff.email }}
                   <span v-if="staff.email === currentUserEmail" class="you-badge"> (あなた) </span>
                 </div>
+                <div v-if="staff.displayName" class="staff-email-small">{{ staff.email }}</div>
                 <div class="staff-meta-row">
                   <div class="staff-meta">
                     {{ getRoleLabel(staff.role) }}
@@ -555,6 +699,66 @@ onMounted(() => {
         </form>
       </div>
     </div>
+
+    <!-- 表示名編集モダル -->
+    <div v-if="showDisplayNameModal" class="modal-overlay" @click="cancelDisplayName">
+      <div class="modal-content" @click.stop>
+        <h2>表示名編集</h2>
+
+        <form @submit.prevent="handleUpdateDisplayName" class="display-name-form">
+          <div class="form-group">
+            <label>表示名 <span class="required">*</span></label>
+            <input
+              v-model="displayNameForm.displayName"
+              type="text"
+              placeholder="例：山田太郎"
+              required
+              autofocus
+            />
+            <p class="form-hint">
+              他のスタッフに表示される名前です。
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" @click="cancelDisplayName" class="cancel-button">キャンセル</button>
+            <button type="submit" :disabled="isUpdatingDisplayName" class="submit-button">
+              {{ isUpdatingDisplayName ? '更新中...' : '更新' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- 招待承認時の表示名入力モダル -->
+    <div v-if="showInvitationAcceptModal" class="modal-overlay" @click="showInvitationAcceptModal = false">
+      <div class="modal-content" @click.stop>
+        <h2>招待を承認</h2>
+
+        <form @submit.prevent="handleAcceptInvitation" class="display-name-form">
+          <div class="form-group">
+            <label>表示名 <span class="required">*</span></label>
+            <input
+              v-model="invitationAcceptForm.displayName"
+              type="text"
+              placeholder="例：山田太郎"
+              required
+              autofocus
+            />
+            <p class="form-hint">
+              店舗内で表示される名前です。後で変更できます。
+            </p>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" @click="showInvitationAcceptModal = false" class="cancel-button">キャンセル</button>
+            <button type="submit" :disabled="isAcceptingInvitation" class="submit-button">
+              {{ isAcceptingInvitation ? '承認中...' : '承認' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -577,6 +781,27 @@ h1 {
   font-size: 2rem;
   color: #333;
   margin: 0;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.display-name-button {
+  padding: 0.75rem 1.5rem;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: background-color 0.3s;
+}
+
+.display-name-button:hover {
+  background-color: #1976d2;
 }
 
 .invite-button {
@@ -704,9 +929,21 @@ h1 {
   flex: 1;
 }
 
+.staff-name {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+
 .staff-email {
   font-weight: 500;
   color: #333;
+  margin-bottom: 0.25rem;
+}
+
+.staff-email-small {
+  font-size: 0.8rem;
+  color: #666;
   margin-bottom: 0.25rem;
 }
 
@@ -837,7 +1074,8 @@ h1 {
   color: #333;
 }
 
-.invite-form {
+.invite-form,
+.display-name-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

@@ -440,9 +440,46 @@ export const inviteStaff = functions
         throw new functions.https.HttpsError('permission-denied', '権限がありません。')
       }
 
+      // 이메일로 사용자가 등록되어 있는지 확인
+      try {
+        await admin.auth().getUserByEmail(email)
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+          throw new functions.https.HttpsError('not-found', 'このメールアドレスは登録されていません。')
+        }
+        throw error
+      }
+
       // 이미 스태프 목록에 있는지 확인
       const existingStaff = storeData.staffList?.find((staff) => staff.email === email)
       if (existingStaff) {
+        // rejected 상태인 경우는 다시 초대 가능
+        if (existingStaff.status === 'rejected') {
+          // rejected 상태를 pending으로 변경
+          const updatedStaffList = storeData.staffList?.map((staff) =>
+            staff.email === email
+              ? {
+                  email,
+                  role: role || staff.role,
+                  status: 'pending' as const,
+                  invitedAt: new Date(),
+                }
+              : staff,
+          )
+
+          await db.collection('stores').doc(storeId).update({
+            staffList: updatedStaffList,
+          })
+
+          logger.info('거절된 스태프 재초대 완료:', {
+            storeId,
+            email,
+            invitedBy: context.auth.uid,
+          })
+
+          return { success: true }
+        }
+
         throw new functions.https.HttpsError('already-exists', '既に招待されています。')
       }
 

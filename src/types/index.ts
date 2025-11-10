@@ -20,6 +20,7 @@ export interface StaffMember {
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
   invitedAt: any
+  displayName?: string
 }
 
 export interface WaitingCustomer {
@@ -40,6 +41,7 @@ export interface StoreJoinRequest {
   storeId: string
   userId: string
   userEmail: string
+  displayName?: string
   message?: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: any

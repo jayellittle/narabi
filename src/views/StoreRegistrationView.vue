@@ -30,6 +30,7 @@ interface Store {
   phoneNumber: string
   status?: string
   hasPendingRequest?: boolean
+  isAlreadyMember?: boolean
 }
 
 const stores = ref<Store[]>([])
@@ -44,6 +45,7 @@ const newStore = ref({
   googleMapsUrl: '',
 })
 const requestMessage = ref('')
+const displayName = ref('')
 
 // 제출 상태
 const isSubmitting = ref(false)
@@ -51,7 +53,7 @@ const errorMessage = ref('')
 
 // 검색된 매장 목록
 const filteredStores = computed(() => {
-  if (!storeSearch.value) return stores.value
+  if (!storeSearch.value.trim()) return []
 
   const search = storeSearch.value.toLowerCase()
   return stores.value.filter(
@@ -83,14 +85,22 @@ const loadStores = async () => {
       pendingRequestsSnapshot.docs.map(doc => doc.data().storeId)
     )
 
-    stores.value = snapshot.docs.map(
-      (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-          hasPendingRequest: pendingStoreIds.has(doc.id),
-        }) as Store,
-    )
+    stores.value = snapshot.docs.map((doc) => {
+      const data = doc.data()
+      const staffList = data.staffList || []
+
+      // 이미 스태프 목록에 active 상태로 등록되어 있는지 확인
+      const isAlreadyMember = staffList.some(
+        (staff: any) => staff.email === user.email && staff.status === 'active'
+      )
+
+      return {
+        id: doc.id,
+        ...data,
+        hasPendingRequest: pendingStoreIds.has(doc.id),
+        isAlreadyMember,
+      } as Store
+    })
   } catch (error) {
     console.error('매장 목록 로드 실패:', error)
     errorMessage.value = '店舗リストの読み込みに失敗しました。'
@@ -164,6 +174,7 @@ const handleJoinStore = async (storeId: string) => {
       await updateDoc(doc(db, 'storeJoinRequests', rejectedRequest.id), {
         status: 'pending',
         userId: user.uid,
+        displayName: displayName.value.trim() || null,
         message: requestMessage.value,
         createdAt: serverTimestamp(),
       })
@@ -178,6 +189,7 @@ const handleJoinStore = async (storeId: string) => {
       storeId,
       userId: user.uid,
       userEmail: user.email || '',
+      displayName: displayName.value.trim() || null,
       message: requestMessage.value,
       status: 'pending',
       createdAt: serverTimestamp(),
@@ -286,6 +298,30 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
         <input v-model="storeSearch" type="text" placeholder="店舗名検索" class="search-input" />
       </div>
 
+      <div class="form-section">
+        <div class="form-group">
+          <label>表示名 <span class="required">*</span></label>
+          <input
+            v-model="displayName"
+            type="text"
+            placeholder="例：山田太郎"
+            required
+            class="form-input"
+          />
+          <p class="form-hint">店舗内で表示される名前です。</p>
+        </div>
+
+        <div class="form-group">
+          <label>メッセージ（任意）</label>
+          <textarea
+            v-model="requestMessage"
+            placeholder="店舗オーナーへのメッセージを入力してください"
+            rows="3"
+            class="form-textarea"
+          ></textarea>
+        </div>
+      </div>
+
       <div v-if="isLoadingStores" class="loading">読み込み中...</div>
 
       <div v-else class="store-list">
@@ -294,24 +330,21 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
             <h3>{{ store.name }}</h3>
             <p class="address">📍 {{ store.address }}</p>
             <p class="phone">📞 {{ store.phoneNumber }}</p>
+            <p v-if="store.isAlreadyMember" class="already-member">✓ 登録済み</p>
           </div>
-          <button @click="handleJoinStore(store.id)" :disabled="isSubmitting || store.hasPendingRequest" class="join-button">
-            {{ store.hasPendingRequest ? '承認待ち' : '登録リクエストを送る' }}
+          <button
+            v-if="!store.isAlreadyMember"
+            @click="handleJoinStore(store.id)"
+            :disabled="isSubmitting || store.hasPendingRequest"
+            class="join-button"
+          >
+            {{ store.hasPendingRequest ? 'リクエスト済み' : '登録リクエストを送る' }}
           </button>
         </div>
 
-        <div v-if="filteredStores.length === 0" class="no-results">
+        <div v-if="filteredStores.length === 0 && storeSearch.trim()" class="no-results">
           該当する店舗が見つかりませんでした。
         </div>
-      </div>
-
-      <div class="message-box">
-        <label>メッセージ（任意）</label>
-        <textarea
-          v-model="requestMessage"
-          placeholder="店舗オーナーへのメッセージを入力してください"
-          rows="3"
-        ></textarea>
       </div>
     </div>
 
@@ -440,6 +473,35 @@ h1 {
   border-radius: 4px;
 }
 
+.form-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.form-hint {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
 .loading {
   text-align: center;
   padding: 2rem;
@@ -475,6 +537,12 @@ h1 {
 .store-info p {
   margin: 0.25rem 0;
   color: #666;
+  font-size: 0.9rem;
+}
+
+.already-member {
+  color: #4caf50;
+  font-weight: 500;
   font-size: 0.9rem;
 }
 
