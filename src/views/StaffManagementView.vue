@@ -508,6 +508,7 @@ onMounted(() => {
                 <div class="staff-icon">👤</div>
                 <div class="staff-details">
                   <div class="staff-email">{{ staff.email }}</div>
+                  <div class="staff-meta">{{ getRoleLabel(staff.role) }}として招待されました</div>
                 </div>
               </div>
 
