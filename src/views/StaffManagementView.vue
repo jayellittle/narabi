@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useFirebase, useTimeFormat } from '../composables/useFirebase'
 import { getAuth } from 'firebase/auth'
 import {
@@ -17,6 +17,7 @@ import {
 import type { Store, StaffMember } from '../types'
 
 const route = useRoute()
+const router = useRouter()
 const auth = getAuth()
 const db = getFirestore()
 const { getStore, inviteStaff, respondToInvitation } = useFirebase()
@@ -73,6 +74,28 @@ const pendingJoinRequests = computed(() => {
 // 현재 사용자가 오너인지 확인
 const isOwner = computed(() => {
   return store.value?.ownerId === currentUser.value?.uid
+})
+
+// 현재 사용자가 pending 상태인지 확인
+const isCurrentUserPending = computed(() => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+  return myStaffEntry?.status === 'pending'
+})
+
+// 현재 사용자가 active 상태인지 확인
+const isCurrentUserActive = computed(() => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+  return myStaffEntry?.status === 'active' || isOwner.value
+})
+
+// 오너가 탈퇴 가능한지 확인 (다른 오너가 있는지)
+const canOwnerLeave = computed(() => {
+  const owners = activeStaff.value.filter((s) => s.role === 'owner')
+  return owners.length > 1
 })
 
 // 역할 라벨
@@ -260,6 +283,56 @@ const handleRemoveStaff = async (staffEmail: string) => {
   }
 }
 
+// 초대 승인/거절 핸들러
+const handleRespondToInvitation = async (accepted: boolean) => {
+  try {
+    await respondToInvitation(storeId.value, accepted)
+
+    if (accepted) {
+      alert('招待を承認しました。ページを再読み込みします。')
+      // Dashboard로 리디렉션 후 다시 해당 스토어로 이동
+      router.push('/dashboard')
+      setTimeout(() => {
+        router.push(`/store/${storeId.value}`)
+      }, 100)
+    } else {
+      alert('招待を拒否しました。')
+      router.push('/dashboard')
+    }
+  } catch (err: any) {
+    console.error('초대 응답 실패:', err)
+    alert(err.message || '招待への応答に失敗しました。')
+  }
+}
+
+// 탈퇴 핸들러
+const handleLeaveStore = async () => {
+  const myStaffEntry = store.value?.staffList.find(
+    (s) => s.email === currentUserEmail.value
+  )
+
+  if (!myStaffEntry) return
+
+  // 오너인 경우 다른 오너가 있는지 확인
+  if (myStaffEntry.role === 'owner' && !canOwnerLeave.value) {
+    alert('他のオーナーがいないため、退店できません。')
+    return
+  }
+
+  if (!confirm('本当に退店しますか？')) {
+    return
+  }
+
+  try {
+    await handleRemoveStaff(currentUserEmail.value)
+    alert('退店しました。')
+    router.push('/dashboard')
+  } catch (err: any) {
+    console.error('탈퇴 실패:', err)
+    alert(err.message || '退店に失敗しました。')
+  }
+}
+
 onMounted(() => {
   loadStore()
 })
@@ -284,77 +357,110 @@ onMounted(() => {
 
     <!-- 스태프 목록 -->
     <div v-else class="staff-sections">
-      <!-- 참여 요청 (storeJoinRequests 컬렉션에서) -->
-      <section v-if="isOwner && pendingJoinRequests.length > 0" class="staff-section join-requests">
-        <h2>参加リクエスト ({{ pendingJoinRequests.length }})</h2>
-        <div class="staff-list">
-          <div v-for="request in pendingJoinRequests" :key="request.id" class="staff-card">
-            <div class="staff-info">
-              <div class="staff-icon">📩</div>
-              <div class="staff-details">
-                <div class="staff-email">{{ request.userEmail }}</div>
-                <div class="staff-meta" v-if="request.message">
-                  メッセージ: {{ request.message }}
-                </div>
-                <div class="staff-meta">送信: {{ formatTimestamp(request.createdAt) }}</div>
-              </div>
-            </div>
-
-            <div class="staff-actions">
-              <button
-                @click="() => handleJoinRequest(request.id, true, request.userEmail)"
-                class="action-btn approve-btn"
-              >
-                承認
-              </button>
-              <button
-                @click="() => handleJoinRequest(request.id, false, request.userEmail)"
-                class="action-btn reject-btn"
-              >
-                拒否
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- 승인 대기 중 (staffList에서) -->
-      <section v-if="pendingStaff.length > 0" class="staff-section pending">
-        <h2>承認待ち ({{ pendingStaff.length }})</h2>
-        <div class="staff-list">
-          <div v-for="staff in pendingStaff" :key="staff.email" class="staff-card">
-            <div class="staff-info">
-              <div class="staff-icon">👤</div>
-              <div class="staff-details">
-                <div class="staff-email">{{ staff.email }}</div>
-                <div class="staff-meta">
-                  {{ getRoleLabel(staff.role) }} • 招待: {{ formatTimestamp(staff.invitedAt) }}
+      <!-- pending 사용자인 경우: 자신의 초대만 표시 -->
+      <template v-if="isCurrentUserPending">
+        <section class="staff-section pending">
+          <h2>招待承認</h2>
+          <div class="staff-list">
+            <div v-for="staff in pendingStaff.filter(s => s.email === currentUserEmail)" :key="staff.email" class="staff-card">
+              <div class="staff-info">
+                <div class="staff-icon">👤</div>
+                <div class="staff-details">
+                  <div class="staff-email">{{ staff.email }}</div>
                 </div>
               </div>
-            </div>
 
-            <!-- 본인 초대인 경우에만 액션 버튼 표시 -->
-            <div v-if="staff.email === currentUserEmail" class="staff-actions">
-              <button
-                @click="() => respondToInvitation(storeId, true)"
-                class="action-btn approve-btn"
-              >
-                承認
-              </button>
-              <button
-                @click="() => respondToInvitation(storeId, false)"
-                class="action-btn reject-btn"
-              >
-                拒否
-              </button>
+              <div class="staff-actions">
+                <button
+                  @click="() => handleRespondToInvitation(true)"
+                  class="action-btn approve-btn"
+                >
+                  承認
+                </button>
+                <button
+                  @click="() => handleRespondToInvitation(false)"
+                  class="action-btn reject-btn"
+                >
+                  拒否
+                </button>
+              </div>
             </div>
-            <div v-else class="pending-label">承認待ち</div>
           </div>
+        </section>
+        <div class="permission-notice">
+          ℹ️ 招待を承認すると、他のスタッフの情報を確認できるようになります。
         </div>
-      </section>
+      </template>
 
-      <!-- 활성 스태프 -->
-      <section class="staff-section active">
+      <!-- active 사용자인 경우: 전체 스태프 목록 표시 -->
+      <template v-else>
+        <!-- 참여 요청 (storeJoinRequests 컬렉션에서) -->
+        <section v-if="isOwner && pendingJoinRequests.length > 0" class="staff-section join-requests">
+          <h2>参加リクエスト ({{ pendingJoinRequests.length }})</h2>
+          <div class="staff-list">
+            <div v-for="request in pendingJoinRequests" :key="request.id" class="staff-card">
+              <div class="staff-info">
+                <div class="staff-icon">📩</div>
+                <div class="staff-details">
+                  <div class="staff-email">{{ request.userEmail }}</div>
+                  <div class="staff-meta" v-if="request.message">
+                    メッセージ: {{ request.message }}
+                  </div>
+                  <div class="staff-meta">送信: {{ formatTimestamp(request.createdAt) }}</div>
+                </div>
+              </div>
+
+              <div class="staff-actions">
+                <button
+                  @click="() => handleJoinRequest(request.id, true, request.userEmail)"
+                  class="action-btn approve-btn"
+                >
+                  承認
+                </button>
+                <button
+                  @click="() => handleJoinRequest(request.id, false, request.userEmail)"
+                  class="action-btn reject-btn"
+                >
+                  拒否
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 승인 대기 중 (staffList에서) -->
+        <section v-if="pendingStaff.length > 0" class="staff-section pending">
+          <h2>承認待ち ({{ pendingStaff.length }})</h2>
+          <div class="staff-list">
+            <div v-for="staff in pendingStaff" :key="staff.email" class="staff-card">
+              <div class="staff-info">
+                <div class="staff-icon">👤</div>
+                <div class="staff-details">
+                  <div class="staff-email">{{ staff.email }}</div>
+                </div>
+              </div>
+
+              <!-- 본인 초대인 경우에만 액션 버튼 표시 -->
+              <div v-if="staff.email === currentUserEmail" class="staff-actions">
+                <button
+                  @click="() => handleRespondToInvitation(true)"
+                  class="action-btn approve-btn"
+                >
+                  承認
+                </button>
+                <button
+                  @click="() => handleRespondToInvitation(false)"
+                  class="action-btn reject-btn"
+                >
+                  拒否
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 활성 스태프 -->
+        <section class="staff-section active">
         <h2>スタッフ ({{ activeStaff.length }})</h2>
         <div v-if="activeStaff.length === 0" class="no-staff">
           現在アクティブなスタッフはいません。
@@ -375,28 +481,40 @@ onMounted(() => {
                   {{ staff.email }}
                   <span v-if="staff.email === currentUserEmail" class="you-badge"> (あなた) </span>
                 </div>
-                <div class="staff-meta">
-                  {{ getRoleLabel(staff.role) }}
+                <div class="staff-meta-row">
+                  <div class="staff-meta">
+                    {{ getRoleLabel(staff.role) }}
+                  </div>
+                  <div class="staff-actions-inline">
+                    <!-- 오너가 다른 스태프 제거 -->
+                    <button
+                      v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
+                      @click="() => handleRemoveStaff(staff.email)"
+                      class="remove-btn"
+                      title="スタッフを削除"
+                    >
+                      🗑️
+                    </button>
+                    <!-- 본인이 탈퇴 (오너는 다른 오너가 있을 때만) -->
+                    <button
+                      v-if="staff.email === currentUserEmail && (staff.role !== 'owner' || canOwnerLeave)"
+                      @click="() => handleLeaveStore()"
+                      class="leave-btn"
+                      title="退店"
+                    >
+                      🚪
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div class="staff-actions-row">
-              <button
-                v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
-                @click="() => handleRemoveStaff(staff.email)"
-                class="remove-btn"
-                title="スタッフを削除"
-              >
-                🗑️
-              </button>
             </div>
           </div>
         </div>
       </section>
 
-
-      <!-- 권한 안내 -->
-      <div v-if="!isOwner" class="permission-notice">ℹ️ スタッフの招待はオーナーのみ可能です。</div>
+        <!-- 권한 안내 -->
+        <div v-if="!isOwner" class="permission-notice">ℹ️ スタッフの招待はオーナーのみ可能です。</div>
+      </template>
     </div>
 
     <!-- 초대 모달 -->
@@ -538,10 +656,30 @@ h1 {
   background: #f8f9fa;
   border-radius: 8px;
   transition: background 0.3s;
+  position: relative;
 }
 
 .staff-card:hover {
   background: #e9ecef;
+}
+
+/* PC에서도 현재 사용자 강조 */
+.staff-card.is-current-user {
+  border: 3px solid #4caf50;
+  padding-bottom: 2.5rem;
+}
+
+.staff-card.is-current-user::after {
+  content: 'あなた';
+  position: absolute;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  background: #4caf50;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
 }
 
 .staff-info {
@@ -572,28 +710,27 @@ h1 {
   margin-bottom: 0.25rem;
 }
 
+/* you-badge는 ::after 의사 요소로 대체하므로 숨김 */
 .you-badge {
-  display: inline-block;
-  margin-left: 0.5rem;
-  padding: 0.125rem 0.5rem;
-  background-color: #4caf50;
-  color: white;
-  font-size: 0.75rem;
-  border-radius: 12px;
-  font-weight: normal;
-}
-
-/* PC에서는 you-badge 표시, 모바일에서는 숨김 */
-@media (max-width: 768px) {
-  .you-badge {
-    display: none;
-  }
+  display: none;
 }
 
 .staff-meta {
   font-size: 0.85rem;
   color: #666;
+}
+
+.staff-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-top: 0.25rem;
+}
+
+.staff-actions-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* 스태프 상태 */
@@ -603,15 +740,17 @@ h1 {
   gap: 0.5rem;
 }
 
-.staff-status,
 .pending-label {
   padding: 0.5rem 1rem;
   border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 500;
+  background-color: #fff3e0;
+  color: #e65100;
 }
 
-.remove-btn {
+.remove-btn,
+.leave-btn {
   padding: 0.5rem;
   background-color: transparent;
   border: none;
@@ -621,24 +760,10 @@ h1 {
   opacity: 0.6;
 }
 
-.remove-btn:hover {
+.remove-btn:hover,
+.leave-btn:hover {
   transform: scale(1.2);
   opacity: 1;
-}
-
-.staff-status.active {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.staff-status.rejected {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.pending-label {
-  background-color: #fff3e0;
-  color: #e65100;
 }
 
 /* 스태프 액션 */
@@ -834,23 +959,9 @@ h1 {
     position: relative;
   }
 
-  /* 모바일에서 현재 사용자 강조 */
+  /* 모바일에서 현재 사용자 카드의 하단 패딩 조정 */
   .staff-card.is-current-user {
-    border: 3px solid #4caf50;
-    padding-top: 2rem;
-  }
-
-  .staff-card.is-current-user::before {
-    content: 'あなた';
-    position: absolute;
-    top: 0.5rem;
-    left: 0.5rem;
-    background: #4caf50;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    font-weight: 500;
+    padding-bottom: 2rem;
   }
 
   .staff-info {
@@ -869,12 +980,12 @@ h1 {
 
   .staff-actions {
     width: 100%;
-    flex-direction: column;
-    gap: 0.75rem;
+    flex-direction: row;
+    gap: 0.5rem;
   }
 
   .action-btn {
-    width: 100%;
+    flex: 1;
     padding: 0.75rem;
     font-size: 1rem;
   }

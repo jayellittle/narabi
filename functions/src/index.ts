@@ -280,9 +280,6 @@ export const requestStoreRegistration = functions
     }
 
     try {
-      // 현재 시간을 먼저 가져오기
-      const now = admin.firestore.Timestamp.now()
-
       // 매장 등록 신청 생성
       const storeRef = await db.collection('stores').add({
         name: storeName,
@@ -299,7 +296,7 @@ export const requestStoreRegistration = functions
             userId: context.auth.uid,
             role: 'owner',
             status: 'active',
-            invitedAt: now,
+            invitedAt: FieldValue.serverTimestamp(),
           },
         ],
         createdAt: FieldValue.serverTimestamp(),
@@ -342,15 +339,13 @@ export const requestJoinStore = functions
       }
 
       // 참여 요청 생성
-      const now = admin.firestore.Timestamp.now()
-
       await db.collection('storeJoinRequests').add({
         storeId,
         userId: context.auth.uid,
         userEmail: context.auth.token.email || '',
         message: message || '',
         status: 'pending',
-        createdAt: now,
+        createdAt: FieldValue.serverTimestamp(),
       })
 
       logger.info('매장 참여 요청 완료:', {
@@ -517,10 +512,23 @@ export const respondToStaffInvitation = functions
 
       // 스태프 상태 업데이트
       const updatedStaffList = [...(storeData.staffList || [])]
-      updatedStaffList[staffIndex] = {
-        ...updatedStaffList[staffIndex],
-        status: accepted ? 'active' : 'rejected',
-        userId: accepted ? context.auth.uid : undefined,
+      if (accepted) {
+        // 승인시: userId를 설정
+        updatedStaffList[staffIndex] = {
+          email: updatedStaffList[staffIndex].email,
+          role: updatedStaffList[staffIndex].role,
+          invitedAt: updatedStaffList[staffIndex].invitedAt,
+          status: 'active',
+          userId: context.auth.uid,
+        }
+      } else {
+        // 거절시: userId 없이 객체 생성
+        updatedStaffList[staffIndex] = {
+          email: updatedStaffList[staffIndex].email,
+          role: updatedStaffList[staffIndex].role,
+          invitedAt: updatedStaffList[staffIndex].invitedAt,
+          status: 'rejected',
+        }
       }
 
       await db.collection('stores').doc(storeId).update({

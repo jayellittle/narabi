@@ -61,11 +61,14 @@ service cloud.firestore {
     // 매장 참여 요청 (storeJoinRequests) 컬렉션
     // ========================================
     match /storeJoinRequests/{requestId} {
-      // 읽기: 요청한 사용자 또는 해당 매장의 오너
-      allow read: if isAuthenticated() && (
+      // 개별 문서 읽기 (get): 요청한 사용자 또는 해당 매장의 오너
+      allow get: if isAuthenticated() && (
         ('userId' in resource.data && resource.data.userId == request.auth.uid) ||
         isStoreOwner(resource.data.storeId)
       );
+
+      // 컬렉션 쿼리 (list): 인증된 사용자 (where 절로 필터링됨)
+      allow list: if isAuthenticated();
 
       // 생성: 인증된 사용자 (userId 필수)
       allow create: if isAuthenticated() &&

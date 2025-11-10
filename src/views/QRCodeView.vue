@@ -442,7 +442,7 @@ h1 {
   }
 
   .qr-display {
-    padding: 1.5rem;
+    padding: 1rem;
   }
 
   .qr-display h2 {
@@ -450,17 +450,18 @@ h1 {
   }
 
   .qr-image-wrapper {
-    padding: 0.75rem;
+    padding: 0.5rem;
     margin-left: auto;
     margin-right: auto;
     box-sizing: border-box;
-    max-width: calc(100% - 3rem);
+    max-width: 100%;
+    width: fit-content;
   }
 
   .qr-image-wrapper canvas {
-    width: 100% !important;
-    height: auto !important;
-    max-width: 250px;
+    width: 180px !important;
+    height: 180px !important;
+    max-width: 100%;
   }
 
   .info-card {

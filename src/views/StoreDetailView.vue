@@ -20,22 +20,35 @@
         <!-- 관리 메뉴 -->
         <nav class="nav-menu">
           <h3>管理メニュー</h3>
-          <router-link :to="`/store/${storeId}`" class="nav-item" :class="{ active: isMenuPage }" exact>
-            <span class="nav-icon">🏠</span>
-            メニュー
-          </router-link>
-          <router-link :to="`/store/${storeId}/qr`" class="nav-item" active-class="active">
-            <span class="nav-icon">📱</span>
-            QRコード表示
-          </router-link>
-          <router-link :to="`/store/${storeId}/waiting`" class="nav-item" active-class="active">
-            <span class="nav-icon">👥</span>
-            順番待ちリスト
-          </router-link>
-          <router-link :to="`/store/${storeId}/staff`" class="nav-item" active-class="active">
-            <span class="nav-icon">⚙️</span>
-            スタッフ管理
-          </router-link>
+          <template v-if="isCurrentUserPending">
+            <!-- pending 사용자는 스태프 관리만 접근 가능 -->
+            <router-link :to="`/store/${storeId}/staff`" class="nav-item" active-class="active">
+              <span class="nav-icon">⚙️</span>
+              招待承認
+            </router-link>
+            <div class="menu-notice">
+              ℹ️ 招待を承認すると全てのメニューにアクセスできます
+            </div>
+          </template>
+          <template v-else>
+            <!-- active 사용자는 전체 메뉴 접근 가능 -->
+            <router-link :to="`/store/${storeId}`" class="nav-item" :class="{ active: isMenuPage }" exact>
+              <span class="nav-icon">🏠</span>
+              メニュー
+            </router-link>
+            <router-link :to="`/store/${storeId}/qr`" class="nav-item" active-class="active">
+              <span class="nav-icon">📱</span>
+              QRコード表示
+            </router-link>
+            <router-link :to="`/store/${storeId}/waiting`" class="nav-item" active-class="active">
+              <span class="nav-icon">👥</span>
+              順番待ちリスト
+            </router-link>
+            <router-link :to="`/store/${storeId}/staff`" class="nav-item" active-class="active">
+              <span class="nav-icon">⚙️</span>
+              スタッフ管理
+            </router-link>
+          </template>
         </nav>
       </div>
 
@@ -66,9 +79,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { getFirestore, doc, getDoc } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
+
+interface StaffMember {
+  email: string
+  userId?: string
+  role: 'owner' | 'staff'
+  status: 'pending' | 'active' | 'rejected'
+  invitedAt: any
+}
 
 interface Store {
   id: string
@@ -77,10 +99,12 @@ interface Store {
   phoneNumber: string
   googleMapsUrl?: string
   ownerId: string
+  staffList?: StaffMember[]
   createdAt: any
 }
 
 const db = getFirestore()
+const auth = getAuth()
 const route = useRoute()
 const router = useRouter()
 const storeId = route.params.storeId as string
@@ -90,6 +114,15 @@ const store = ref<Store | null>(null)
 // 現在のページがメニューページかどうか
 const isMenuPage = computed(() => {
   return route.name === 'StoreManagementMenu'
+})
+
+// 現在のユーザーがpending状態かどうか
+const isCurrentUserPending = computed(() => {
+  if (!store.value || !auth.currentUser) return false
+  const myStaffEntry = store.value.staffList?.find(
+    (s) => s.email === auth.currentUser?.email
+  )
+  return myStaffEntry?.status === 'pending'
 })
 
 onMounted(async () => {
@@ -116,11 +149,36 @@ onMounted(async () => {
   }
 })
 
+// pending ユーザーがアクセスできないページへの遷移を防ぐ
+watch(
+  () => [route.path, isCurrentUserPending.value],
+  ([currentPath, isPending]) => {
+    if (isPending && store.value) {
+      const restrictedPaths = [
+        `/store/${storeId}`,
+        `/store/${storeId}/qr`,
+        `/store/${storeId}/waiting`,
+      ]
+
+      if (restrictedPaths.includes(currentPath as string)) {
+        alert('招待を承認すると全てのメニューにアクセスできます。')
+        router.replace(`/store/${storeId}/staff`)
+      }
+    }
+  },
+  { immediate: true }
+)
+
 const goBack = () => {
   router.push('/dashboard')
 }
 
 const goToMenu = () => {
+  // pending ユーザーは店舗一覧に戻る
+  if (isCurrentUserPending.value) {
+    router.push('/dashboard')
+    return
+  }
   router.push(`/store/${storeId}`)
 }
 </script>
@@ -266,6 +324,16 @@ const goToMenu = () => {
 
 .nav-icon {
   font-size: 1.2rem;
+}
+
+.menu-notice {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background-color: #fff3e0;
+  color: #f57c00;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
 }
 
 /* 메인 컨텐츠 */

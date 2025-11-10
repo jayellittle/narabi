@@ -307,7 +307,7 @@ onMounted(() => {
 .waiting-list-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 1rem 2rem 2rem 2rem;
+  padding: 0.5rem 2rem 2rem 2rem;
 }
 
 /* 헤더 */
