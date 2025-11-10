@@ -53,6 +53,7 @@ interface StaffMember {
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
   invitedAt: admin.firestore.Timestamp
+  displayName?: string
 }
 
 // ========================================
