@@ -371,9 +371,20 @@ const handleLeaveStore = async () => {
   }
 
   try {
-    await handleRemoveStaff(currentUserEmail.value)
-    alert('退店しました。')
-    router.push('/dashboard')
+    const storeRef = doc(db, 'stores', storeId.value)
+    const storeDoc = await getDoc(storeRef)
+
+    if (storeDoc.exists()) {
+      const staffList = storeDoc.data().staffList || []
+      const updatedStaffList = staffList.filter((staff: any) => staff.email !== currentUserEmail.value)
+
+      await updateDoc(storeRef, {
+        staffList: updatedStaffList,
+      })
+
+      alert('退店しました。')
+      router.push('/dashboard')
+    }
   } catch (err: any) {
     console.error('탈퇴 실패:', err)
     alert(err.message || '退店に失敗しました。')
