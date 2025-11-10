@@ -306,15 +306,11 @@ const openInvitationAcceptModal = () => {
 
 // 초대 승인 처리
 const handleAcceptInvitation = async () => {
-  if (!invitationAcceptForm.value.displayName.trim()) {
-    alert('表示名を入力してください。')
-    return
-  }
-
   isAcceptingInvitation.value = true
 
   try {
-    await respondToInvitation(storeId.value, true, invitationAcceptForm.value.displayName.trim())
+    const displayNameToSend = invitationAcceptForm.value.displayName.trim() || undefined
+    await respondToInvitation(storeId.value, true, displayNameToSend)
 
     alert('招待を承認しました。ページを再読み込みします。')
     showInvitationAcceptModal.value = false
@@ -705,12 +701,11 @@ onMounted(() => {
 
         <form @submit.prevent="handleAcceptInvitation" class="display-name-form">
           <div class="form-group">
-            <label>表示名 <span class="required">*</span></label>
+            <label>表示名（任意）</label>
             <input
               v-model="invitationAcceptForm.displayName"
               type="text"
               placeholder="例：山田 太郎"
-              required
               autofocus
             />
             <p class="form-hint">
