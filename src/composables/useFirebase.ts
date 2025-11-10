@@ -112,9 +112,9 @@ export function useFirebase() {
   /**
    * 스태프 초대 응답
    */
-  const respondToInvitation = async (storeId: string, accepted: boolean) => {
+  const respondToInvitation = async (storeId: string, accepted: boolean, displayName?: string) => {
     const respondFunc = httpsCallable(functions, 'respondToStaffInvitation')
-    return await respondFunc({ storeId, accepted })
+    return await respondFunc({ storeId, accepted, displayName })
   }
 
   // ========================================

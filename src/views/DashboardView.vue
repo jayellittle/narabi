@@ -324,16 +324,16 @@ onMounted(() => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
-  background-color: #e8f5e9;
-  border-left: 3px solid #81c784;
+  background-color: #f1f8f4;
+  border-left: 3px solid #a5d6a7;
 }
 
 .store-item:not(.pending):hover {
-  background-color: #c8e6c9;
+  background-color: #e8f5e9;
 }
 
 .store-item.active {
-  background-color: #c8e6c9;
+  background-color: #e8f5e9;
   border-left: 3px solid #4caf50;
 }
 

@@ -523,7 +523,7 @@ export const respondToStaffInvitation = functions
       throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
     }
 
-    const { storeId, accepted } = data
+    const { storeId, accepted, displayName } = data
 
     if (!storeId || accepted === undefined) {
       throw new functions.https.HttpsError('invalid-argument', '店舗IDと応答は必須です。')
@@ -550,13 +550,14 @@ export const respondToStaffInvitation = functions
       // 스태프 상태 업데이트
       const updatedStaffList = [...(storeData.staffList || [])]
       if (accepted) {
-        // 승인시: userId를 설정
+        // 승인시: userId와 displayName을 설정
         updatedStaffList[staffIndex] = {
           email: updatedStaffList[staffIndex].email,
           role: updatedStaffList[staffIndex].role,
           invitedAt: updatedStaffList[staffIndex].invitedAt,
           status: 'active',
           userId: context.auth.uid,
+          displayName: displayName || null,
         }
       } else {
         // 거절시: userId 없이 객체 생성
@@ -576,6 +577,7 @@ export const respondToStaffInvitation = functions
         storeId,
         userEmail,
         accepted,
+        displayName: displayName || null,
       })
 
       return { success: true }

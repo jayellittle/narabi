@@ -314,35 +314,16 @@ const handleAcceptInvitation = async () => {
   isAcceptingInvitation.value = true
 
   try {
-    const storeRef = doc(db, 'stores', storeId.value)
-    const storeDoc = await getDoc(storeRef)
+    await respondToInvitation(storeId.value, true, invitationAcceptForm.value.displayName.trim())
 
-    if (storeDoc.exists()) {
-      const staffList = storeDoc.data().staffList || []
-      const updatedStaffList = staffList.map((staff: any) =>
-        staff.email === currentUserEmail.value && staff.status === 'pending'
-          ? {
-              ...staff,
-              status: 'active',
-              userId: currentUser.value?.uid,
-              displayName: invitationAcceptForm.value.displayName.trim(),
-            }
-          : staff
-      )
-
-      await updateDoc(storeRef, {
-        staffList: updatedStaffList,
-      })
-
-      alert('招待を承認しました。ページを再読み込みします。')
-      showInvitationAcceptModal.value = false
-      router.push('/dashboard')
-      setTimeout(() => {
-        router.push(`/store/${storeId.value}`)
-      }, 100)
-    }
+    alert('招待を承認しました。ページを再読み込みします。')
+    showInvitationAcceptModal.value = false
+    router.push('/dashboard')
+    setTimeout(() => {
+      router.push(`/store/${storeId.value}`)
+    }, 100)
   } catch (err: any) {
-    console.error('초대 승인 실패:', err)
+    console.error('初대 승인 실패:', err)
     alert(err.message || '招待の承認に失敗しました。')
   } finally {
     isAcceptingInvitation.value = false
@@ -356,24 +337,10 @@ const handleRejectInvitation = async () => {
   }
 
   try {
-    const storeRef = doc(db, 'stores', storeId.value)
-    const storeDoc = await getDoc(storeRef)
+    await respondToInvitation(storeId.value, false)
 
-    if (storeDoc.exists()) {
-      const staffList = storeDoc.data().staffList || []
-      const updatedStaffList = staffList.map((staff: any) =>
-        staff.email === currentUserEmail.value && staff.status === 'pending'
-          ? { ...staff, status: 'rejected' }
-          : staff
-      )
-
-      await updateDoc(storeRef, {
-        staffList: updatedStaffList,
-      })
-
-      alert('招待を拒否しました。')
-      router.push('/dashboard')
-    }
+    alert('招待を拒否しました。')
+    router.push('/dashboard')
   } catch (err: any) {
     console.error('초대 거절 실패:', err)
     alert(err.message || '招待の拒否に失敗しました。')
@@ -712,7 +679,7 @@ onMounted(() => {
             <input
               v-model="displayNameForm.displayName"
               type="text"
-              placeholder="例：山田太郎"
+              placeholder="例：山田 太郎"
               required
               autofocus
             />
@@ -742,7 +709,7 @@ onMounted(() => {
             <input
               v-model="invitationAcceptForm.displayName"
               type="text"
-              placeholder="例：山田太郎"
+              placeholder="例：山田 太郎"
               required
               autofocus
             />

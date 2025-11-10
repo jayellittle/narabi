@@ -401,15 +401,6 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
           />
         </div>
 
-        <div class="form-group">
-          <label>メッセージ（任意）</label>
-          <textarea
-            v-model="requestMessage"
-            placeholder="承認担当者へのメッセージを入力してください"
-            rows="4"
-          ></textarea>
-        </div>
-
         <button type="submit" :disabled="isSubmitting" class="submit-button">
           {{ isSubmitting ? '送信中...' : '生成' }}
         </button>
@@ -432,7 +423,7 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
             <input
               v-model="displayName"
               type="text"
-              placeholder="例：山田太郎"
+              placeholder="例：山田 太郎"
               required
               autofocus
             />
