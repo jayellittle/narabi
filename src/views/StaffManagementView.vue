@@ -401,15 +401,12 @@ const openDisplayNameModal = () => {
 
 // 표시명 업데이트
 const handleUpdateDisplayName = async () => {
-  if (!displayNameForm.value.displayName.trim()) {
-    alert('表示名を入力してください。')
-    return
-  }
-
   isUpdatingDisplayName.value = true
 
   try {
-    await updateStaffDisplayName(storeId.value, displayNameForm.value.displayName.trim())
+    // 空の場合は表示名を削除
+    const displayNameValue = displayNameForm.value.displayName.trim() || ''
+    await updateStaffDisplayName(storeId.value, displayNameValue)
 
     alert('表示名を更新しました。')
     showDisplayNameModal.value = false
@@ -667,16 +664,15 @@ onMounted(() => {
 
         <form @submit.prevent="handleUpdateDisplayName" class="display-name-form">
           <div class="form-group">
-            <label>表示名 <span class="required">*</span></label>
+            <label>表示名（任意）</label>
             <input
               v-model="displayNameForm.displayName"
               type="text"
               placeholder="例：山田 太郎"
-              required
               autofocus
             />
             <p class="form-hint">
-              他のスタッフに表示される名前です。
+              他のスタッフに表示される名前です。空にするとメールアドレスが表示されます。
             </p>
           </div>
 
@@ -877,6 +873,9 @@ h1 {
   font-size: 2rem;
   width: 50px;
   height: 50px;
+  min-width: 50px;
+  min-height: 50px;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1168,6 +1167,8 @@ h1 {
   .staff-icon {
     width: 60px;
     height: 60px;
+    min-width: 60px;
+    min-height: 60px;
     font-size: 2.5rem;
   }
 
@@ -1229,6 +1230,8 @@ h1 {
   .staff-icon {
     width: 50px;
     height: 50px;
+    min-width: 50px;
+    min-height: 50px;
     font-size: 2rem;
   }
 }

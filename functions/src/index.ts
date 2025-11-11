@@ -604,9 +604,12 @@ export const updateStaffDisplayName = functions
 
     const { storeId, displayName } = data
 
-    if (!storeId || !displayName) {
-      throw new functions.https.HttpsError('invalid-argument', '店舗IDと表示名は必須です。')
+    if (!storeId) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDは必須です。')
     }
+
+    // displayNameはnullまたは空文字列を許可（表示名削除のため）
+    const newDisplayName = displayName && displayName.trim() ? displayName.trim() : null
 
     try {
       const storeDoc = await db.collection('stores').doc(storeId).get()
@@ -631,9 +634,15 @@ export const updateStaffDisplayName = functions
 
       // 표시명 업데이트
       const updatedStaffList = [...(storeData.staffList || [])]
-      updatedStaffList[staffIndex] = {
-        ...updatedStaffList[staffIndex],
-        displayName: displayName.trim(),
+      if (newDisplayName) {
+        updatedStaffList[staffIndex] = {
+          ...updatedStaffList[staffIndex],
+          displayName: newDisplayName,
+        }
+      } else {
+        // displayNameを削除
+        const { displayName: _, ...staffWithoutDisplayName } = updatedStaffList[staffIndex]
+        updatedStaffList[staffIndex] = staffWithoutDisplayName as StaffMember
       }
 
       await db.collection('stores').doc(storeId).update({
@@ -643,7 +652,7 @@ export const updateStaffDisplayName = functions
       logger.info('스태프 표시명 업데이트 완료:', {
         storeId,
         userEmail,
-        displayName: displayName.trim(),
+        displayName: newDisplayName,
       })
 
       return { success: true }
