@@ -14,20 +14,23 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { storage } from '../firebase'
 
 const router = useRouter()
 const db = getFirestore()
 const auth = getAuth()
 
-// 모드: 기존 매장 등록 vs 새 매장 생성
+// モード: 既存の店舗に登録 vs 新しい店舗を生成
 const mode = ref<'existing' | 'new'>('new')
 
-// 기존 매장 검색
+// 既存店舗検索
 interface Store {
   id: string
   name: string
   address: string
   phoneNumber: string
+  imageUrl?: string
   status?: string
   hasPendingRequest?: boolean
 }
@@ -36,7 +39,7 @@ const stores = ref<Store[]>([])
 const storeSearch = ref('')
 const isLoadingStores = ref(false)
 
-// 새 매장 정보
+// 新しい店舗情報
 const newStore = ref({
   storeName: '',
   address: '',
@@ -45,11 +48,16 @@ const newStore = ref({
 })
 const requestMessage = ref('')
 
-// 제출 상태
+// 店舗画像アップロード
+const storeImageFile = ref<File | null>(null)
+const storeImagePreview = ref<string>('')
+const fileInput = ref<HTMLInputElement | null>(null)
+
+// 提出状態
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
-// 검색된 매장 목록
+// 検索された店舗リスト
 const filteredStores = computed(() => {
   if (!storeSearch.value) return stores.value
 
@@ -60,7 +68,41 @@ const filteredStores = computed(() => {
   )
 })
 
-// 매장 목록 로드
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (file) {
+    storeImageFile.value = file
+
+    // プレビュー表示
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      storeImagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const uploadStoreImage = async (storeId: string): Promise<string | null> => {
+  if (!storeImageFile.value) return null
+
+  try {
+    const imageRef = storageRef(storage, `stores/${storeId}/store.jpg`)
+    await uploadBytes(imageRef, storeImageFile.value)
+    const downloadUrl = await getDownloadURL(imageRef)
+    return downloadUrl
+  } catch (error) {
+    console.error('店舗画像のアップロード失敗:', error)
+    return null
+  }
+}
+
+// 店舗リスト読み込み
 const loadStores = async () => {
   isLoadingStores.value = true
   try {
@@ -72,7 +114,7 @@ const loadStores = async () => {
     const q = query(collection(db, 'stores'), where('status', '==', 'approved'))
     const snapshot = await getDocs(q)
 
-    // 현재 사용자의 모든 pending 요청 조회
+    // 現在のユーザーのすべてのpendingリクエストを照会
     const pendingRequestsQuery = query(
       collection(db, 'storeJoinRequests'),
       where('userId', '==', user.uid),
@@ -92,14 +134,14 @@ const loadStores = async () => {
         }) as Store,
     )
   } catch (error) {
-    console.error('매장 목록 로드 실패:', error)
+    console.error('店舗リスト読み込み失敗:', error)
     errorMessage.value = '店舗リストの読み込みに失敗しました。'
   } finally {
     isLoadingStores.value = false
   }
 }
 
-// 기존 매장 참여 요청
+// 既存店舗への参加リクエスト
 const handleJoinStore = async (storeId: string) => {
   const user = auth.currentUser
   if (!user) {
@@ -112,7 +154,7 @@ const handleJoinStore = async (storeId: string) => {
   errorMessage.value = ''
 
   try {
-    // 1. 이미 스태프로 등록되어 있는지 확인
+    // 1. 既にスタッフとして登録されているか確認
     const storeRef = doc(db, 'stores', storeId)
     const storeDoc = await getDoc(storeRef)
 
@@ -139,7 +181,7 @@ const handleJoinStore = async (storeId: string) => {
       }
     }
 
-    // 2. 기존 리퀘스트 확인 (pending + rejected 모두)
+    // 2. 既存リクエストの確認 (pending + rejected 両方)
     const existingRequestQuery = query(
       collection(db, 'storeJoinRequests'),
       where('storeId', '==', storeId),
@@ -148,7 +190,7 @@ const handleJoinStore = async (storeId: string) => {
 
     const existingRequests = await getDocs(existingRequestQuery)
 
-    // pending 리퀘스트가 있는지 확인
+    // pendingリクエストがあるか確認
     const pendingRequest = existingRequests.docs.find((doc) => doc.data().status === 'pending')
 
     if (pendingRequest) {
@@ -157,7 +199,7 @@ const handleJoinStore = async (storeId: string) => {
       return
     }
 
-    // rejected 리퀘스트가 있으면 pending으로 업데이트
+    // rejectedリクエストがあればpendingに更新
     const rejectedRequest = existingRequests.docs.find((doc) => doc.data().status === 'rejected')
 
     if (rejectedRequest) {
@@ -173,7 +215,7 @@ const handleJoinStore = async (storeId: string) => {
       return
     }
 
-    // 3. 새 리퀘스트 작성
+    // 3. 新しいリクエスト作成
     await addDoc(collection(db, 'storeJoinRequests'), {
       storeId,
       userId: user.uid,
@@ -186,19 +228,17 @@ const handleJoinStore = async (storeId: string) => {
     alert('参加リクエストを送信しました。承認をお待ちください。')
     router.push('/dashboard')
   } catch (error: any) {
-    console.error('참여 요청 실패:', error)
+    console.error('参加リクエスト失敗:', error)
     errorMessage.value = error.message || '参加リクエストに失敗しました。'
-
-    // 에러가 발생해도 대시보드로 돌아가지 않고 여기에 남음
     alert(`エラーが発生しました: ${error.message}`)
   } finally {
     isSubmitting.value = false
   }
 }
 
-// 새 매장 등록 신청 (직접 Firestore에 작성)
+// 新しい店舗の登録申請 (直接Firestoreに作成)
 const handleCreateStore = async () => {
-  // 유효성 검사
+  // バリデーション
   if (!newStore.value.storeName || !newStore.value.address || !newStore.value.phoneNumber) {
     errorMessage.value = '店舗名、住所、電話番号は必須です。'
     return
@@ -215,10 +255,9 @@ const handleCreateStore = async () => {
   errorMessage.value = ''
 
   try {
-    // ✅ 현재 시간을 Date 객체로
     const now = new Date()
 
-    // Firestore에 직접 작성
+    // Firestoreに直接作成
     const docRef = await addDoc(collection(db, 'stores'), {
       name: newStore.value.storeName,
       address: newStore.value.address,
@@ -234,23 +273,34 @@ const handleCreateStore = async () => {
           userId: user.uid,
           role: 'owner',
           status: 'active',
-          invitedAt: now, // ✅ 여기만 변경
+          invitedAt: now,
         },
       ],
       createdAt: serverTimestamp(),
     })
 
+    // 店舗画像をアップロード
+    if (storeImageFile.value) {
+      const imageUrl = await uploadStoreImage(docRef.id)
+      if (imageUrl) {
+        // 店舗ドキュメントにimageUrlを追加
+        await updateDoc(doc(db, 'stores', docRef.id), {
+          imageUrl: imageUrl,
+        })
+      }
+    }
+
     alert('店舗を作成しました！')
     router.push(`/dashboard/${docRef.id}`)
   } catch (error: any) {
-    console.error('매장 등록 실패:', error)
+    console.error('店舗登録失敗:', error)
     errorMessage.value = error.message || '店舗登録に失敗しました。'
   } finally {
     isSubmitting.value = false
   }
 }
 
-// 탭 변경 시 매장 목록 로드
+// タブ変更時に店舗リストを読み込む
 const handleModeChange = (newMode: 'existing' | 'new') => {
   mode.value = newMode
   errorMessage.value = ''
@@ -265,7 +315,7 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
   <div class="store-registration-container">
     <h1>店舗登録</h1>
 
-    <!-- 탭 -->
+    <!-- タブ -->
     <div class="tabs">
       <button :class="{ active: mode === 'existing' }" @click="handleModeChange('existing')">
         既存の店舗に登録
@@ -275,12 +325,12 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
       </button>
     </div>
 
-    <!-- 에러 메시지 -->
+    <!-- エラーメッセージ -->
     <div v-if="errorMessage" class="error-message">
       {{ errorMessage }}
     </div>
 
-    <!-- 기존 매장에 등록 -->
+    <!-- 既存店舗に登録 -->
     <div v-if="mode === 'existing'" class="existing-store-section">
       <div class="search-box">
         <input v-model="storeSearch" type="text" placeholder="店舗名検索" class="search-input" />
@@ -290,6 +340,11 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
 
       <div v-else class="store-list">
         <div v-for="store in filteredStores" :key="store.id" class="store-card">
+          <div v-if="store.imageUrl" class="store-image">
+            <img :src="store.imageUrl" :alt="store.name" />
+          </div>
+          <div v-else class="store-image store-emoji">🏪</div>
+
           <div class="store-info">
             <h3>{{ store.name }}</h3>
             <p class="address">📍 {{ store.address }}</p>
@@ -315,9 +370,28 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
       </div>
     </div>
 
-    <!-- 새 매장 생성 -->
+    <!-- 新しい店舗生成 -->
     <div v-else class="new-store-section">
       <form @submit.prevent="handleCreateStore" class="store-form">
+        <!-- 店舗画像アップロード -->
+        <div class="form-group store-image-upload">
+          <label>店舗画像（任意）</label>
+          <div class="image-preview-container" @click="triggerFileInput">
+            <img v-if="storeImagePreview" :src="storeImagePreview" alt="Store" class="image-preview" />
+            <div v-else class="image-placeholder">
+              <span class="camera-icon">📷</span>
+              <span class="upload-text">写真を選択</span>
+            </div>
+          </div>
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            @change="handleFileSelect"
+            style="display: none"
+          />
+        </div>
+
         <div class="form-group">
           <label>店舗名 <span class="required">*</span></label>
           <input
@@ -393,20 +467,22 @@ h1 {
 
 .tabs {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 2rem;
   border-bottom: 2px solid #e0e0e0;
 }
 
 .tabs button {
-  padding: 1rem 2rem;
+  flex: 1;
+  padding: 0.875rem 1rem;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   color: #666;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .tabs button.active {
@@ -423,9 +499,9 @@ h1 {
   margin-bottom: 1rem;
 }
 
-/* 기존 매장 섹션 */
+/* 既存店舗セクション */
 .existing-store-section {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .search-box {
@@ -450,14 +526,14 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .store-card {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  gap: 1rem;
+  padding: 1rem;
   border: 1px solid #ddd;
   border-radius: 8px;
   transition: box-shadow 0.3s;
@@ -467,9 +543,37 @@ h1 {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.store-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.store-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.store-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+}
+
+.store-info {
+  flex: 1;
+  min-width: 0;
+}
+
 .store-info h3 {
   margin: 0 0 0.5rem 0;
   color: #333;
+  font-size: 1.1rem;
 }
 
 .store-info p {
@@ -479,14 +583,16 @@ h1 {
 }
 
 .join-button {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 1.25rem;
   background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.95rem;
   transition: background-color 0.3s;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .join-button:hover:not(:disabled) {
@@ -504,15 +610,15 @@ h1 {
   color: #666;
 }
 
-/* 새 매장 섹션 */
+/* 新しい店舗セクション */
 .new-store-section {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .store-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .form-group {
@@ -545,8 +651,55 @@ h1 {
   border-color: #4caf50;
 }
 
+/* 店舗画像アップロード */
+.store-image-upload {
+  margin-bottom: 0.5rem;
+}
+
+.image-preview-container {
+  width: 100%;
+  height: 200px;
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px dashed #ddd;
+  transition: border-color 0.3s;
+  background-color: #f9f9f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-preview-container:hover {
+  border-color: #4caf50;
+  background-color: #f5f5f5;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.camera-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-text {
+  font-size: 1rem;
+  color: #666;
+}
+
 .message-box {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
 }
 
 .message-box label {
@@ -563,6 +716,7 @@ h1 {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-family: inherit;
+  resize: vertical;
 }
 
 .submit-button {
@@ -599,5 +753,82 @@ h1 {
 
 .back-link a:hover {
   text-decoration: underline;
+}
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .store-registration-container {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .tabs {
+    gap: 0.25rem;
+  }
+
+  .tabs button {
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+  }
+
+  .store-card {
+    flex-wrap: wrap;
+    padding: 0.875rem;
+  }
+
+  .store-image {
+    width: 60px;
+    height: 60px;
+  }
+
+  .store-emoji {
+    font-size: 2rem;
+  }
+
+  .store-info {
+    flex: 1;
+    min-width: calc(100% - 80px);
+  }
+
+  .store-info h3 {
+    font-size: 1rem;
+  }
+
+  .store-info p {
+    font-size: 0.85rem;
+  }
+
+  .join-button {
+    width: 100%;
+    margin-top: 0.5rem;
+    padding: 0.875rem;
+  }
+
+  .image-preview-container {
+    height: 180px;
+  }
+
+  .store-form {
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .tabs button {
+    font-size: 0.8rem;
+    padding: 0.7rem 0.4rem;
+  }
+
+  .image-preview-container {
+    height: 160px;
+  }
+
+  .camera-icon {
+    font-size: 2.5rem;
+  }
 }
 </style>

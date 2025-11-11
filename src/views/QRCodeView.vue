@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import QrcodeVue from 'qrcode.vue'
 import { useFirebase } from '../composables/useFirebase'
 import type { WaitingCustomer } from '../types'
 
 const route = useRoute()
+const router = useRouter()
 const { subscribeToWaitingList, generateQRCode, getStore } = useFirebase()
 
 const storeId = ref(route.params.storeId as string)
@@ -17,40 +18,39 @@ const error = ref('')
 
 let unsubscribe: (() => void) | null = null
 
-// 매장 정보 및 대기열 로드
+// 店舗情報および待機列の読み込み
 const loadData = async () => {
   isLoading.value = true
   error.value = ''
 
   try {
-    // 매장 정보 가져오기
+    // 店舗情報の取得
     const store = await getStore(storeId.value)
     if (store) {
       storeName.value = store.name
     }
 
-    // QR 코드 URL 생성
+    // QRコードURLの生成
     const baseUrl = window.location.origin
     qrCodeUrl.value = `${baseUrl}/wait?store=${storeId.value}`
 
-    // 백엔드에도 QR URL 저장
+    // バックエンドにもQR URLを保存
     await generateQRCode(storeId.value)
 
-    // 대기열 실시간 구독
+    // 待機列のリアルタイム購読
     unsubscribe = subscribeToWaitingList(storeId.value, (customers) => {
       waitingList.value = customers
     })
   } catch (err) {
-    console.error('데이터 로드 실패:', err)
+    console.error('データ読み込み失敗:', err)
     error.value = 'データの読み込みに失敗しました。'
   } finally {
     isLoading.value = false
   }
 }
 
-// QR 코드 다운로드
+// QRコードダウンロード
 const downloadQR = () => {
-  // QR 코드 SVG를 캔버스로 변환 후 다운로드
   const qrElement = document.querySelector('.qr-image-wrapper canvas') as HTMLCanvasElement
   if (qrElement) {
     const link = document.createElement('a')
@@ -60,7 +60,7 @@ const downloadQR = () => {
   }
 }
 
-// QR 코드 인쇄
+// QRコード印刷
 const printQR = () => {
   const qrElement = document.querySelector('.qr-image-wrapper canvas') as HTMLCanvasElement
   if (qrElement) {
@@ -106,11 +106,16 @@ const printQR = () => {
   }
 }
 
+// 待機リストページに移動
+const goToWaitingList = () => {
+  router.push(`/store/${storeId.value}/waiting`)
+}
+
 onMounted(() => {
   loadData()
 })
 
-// 컴포넌트 언마운트 시 구독 해제
+// コンポーネントアンマウント時に購読解除
 watch(
   () => route.params.storeId,
   (newId) => {
@@ -122,7 +127,7 @@ watch(
   },
 )
 
-// 컴포넌트 언마운트
+// コンポーネントアンマウント
 onMounted(() => {
   return () => {
     if (unsubscribe) unsubscribe()
@@ -141,9 +146,9 @@ onMounted(() => {
     </div>
 
     <div v-else class="qr-content">
-      <!-- QR 코드 표시 -->
+      <!-- QRコード表示 -->
       <div class="qr-display">
-        <h2>{{ storeName }}</h2>
+        <h2 class="store-name-pc">{{ storeName }}</h2>
         <div class="qr-image-wrapper">
           <qrcode-vue :value="qrCodeUrl" :size="300" level="H" render-as="canvas" />
         </div>
@@ -152,48 +157,24 @@ onMounted(() => {
         </p>
       </div>
 
-      <!-- 대기 인원 표시 -->
-      <div class="waiting-info">
+      <!-- 待機人数表示（クリック可能） -->
+      <div class="waiting-info" @click="goToWaitingList">
         <div class="info-card">
           <div class="info-icon">👥</div>
           <div class="info-content">
             <div class="info-label">現在順番待ち中</div>
             <div class="info-value">{{ waitingList.length }}名</div>
           </div>
+          <div class="info-arrow">→</div>
         </div>
       </div>
 
-      <!-- 액션 버튼 -->
+      <!-- アクションボタン -->
       <div class="action-buttons">
         <button @click="downloadQR" class="action-button download">
           📥 QRコードをダウンロード
         </button>
         <button @click="printQR" class="action-button print">🖨️ QRコードを印刷</button>
-      </div>
-
-      <!-- 대기자 목록 미리보기 -->
-      <div class="waiting-preview">
-        <h3>待機中のお客様</h3>
-        <div v-if="waitingList.length === 0" class="no-waiting">現在待機中のお客様はいません。</div>
-        <div v-else class="preview-list">
-          <div v-for="customer in waitingList.slice(0, 5)" :key="customer.id" class="preview-item">
-            <img
-              :src="customer.pictureUrl || '/default-avatar.png'"
-              :alt="customer.displayName"
-              class="preview-avatar"
-            />
-            <div class="preview-info">
-              <div class="preview-name">{{ customer.displayName }}</div>
-              <div class="preview-number">順番: {{ customer.queueNumber }}番</div>
-            </div>
-            <div :class="['preview-status', customer.status]">
-              {{ customer.status === 'waiting' ? '待機中' : '呼出済' }}
-            </div>
-          </div>
-          <div v-if="waitingList.length > 5" class="preview-more">
-            他 {{ waitingList.length - 5 }}名
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -230,7 +211,7 @@ h1 {
   gap: 2rem;
 }
 
-/* QR 코드 표시 */
+/* QRコード表示 */
 .qr-display {
   background: white;
   border-radius: 12px;
@@ -277,14 +258,12 @@ h1 {
   overflow-wrap: break-word;
 }
 
-/* 대기 정보 */
+/* 待機情報（クリック可能） */
 .waiting-info {
-  display: flex;
-  gap: 1rem;
+  cursor: pointer;
 }
 
 .info-card {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -293,6 +272,16 @@ h1 {
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.waiting-info:hover .info-card {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+}
+
+.waiting-info:active .info-card {
+  transform: translateY(0);
 }
 
 .info-icon {
@@ -314,7 +303,12 @@ h1 {
   font-weight: bold;
 }
 
-/* 액션 버튼 */
+.info-arrow {
+  font-size: 1.5rem;
+  opacity: 0.8;
+}
+
+/* アクションボタン */
 .action-buttons {
   display: flex;
   gap: 1rem;
@@ -349,87 +343,6 @@ h1 {
   background-color: #1976d2;
 }
 
-/* 대기자 미리보기 */
-.waiting-preview {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.waiting-preview h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.no-waiting {
-  text-align: center;
-  padding: 2rem;
-  color: #999;
-}
-
-.preview-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.preview-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
-.preview-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.preview-info {
-  flex: 1;
-}
-
-.preview-name {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 0.25rem;
-}
-
-.preview-number {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.preview-status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.preview-status.waiting {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.preview-status.called {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.preview-more {
-  text-align: center;
-  padding: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
 /* モバイル対応 */
 @media (max-width: 768px) {
   .qr-code-container {
@@ -445,8 +358,9 @@ h1 {
     padding: 1rem;
   }
 
-  .qr-display h2 {
-    font-size: 1.2rem;
+  /* モバイルでは店舗名を非表示 */
+  .store-name-pc {
+    display: none;
   }
 
   .qr-image-wrapper {
@@ -459,9 +373,15 @@ h1 {
   }
 
   .qr-image-wrapper canvas {
-    width: 180px !important;
-    height: 180px !important;
+    width: 200px !important;
+    height: 200px !important;
     max-width: 100%;
+  }
+
+  .qr-instruction {
+    font-size: 0.85rem;
+    /* 줄바꿈을 방지하기 위해 */
+    white-space: normal;
   }
 
   .info-card {
@@ -485,19 +405,6 @@ h1 {
     padding: 1.25rem;
     font-size: 1.1rem;
   }
-
-  .waiting-preview {
-    padding: 1.25rem;
-  }
-
-  .preview-item {
-    padding: 1rem;
-  }
-
-  .preview-avatar {
-    width: 50px;
-    height: 50px;
-  }
 }
 
 /* 小さいモバイル画面 */
@@ -506,16 +413,28 @@ h1 {
     font-size: 1.3rem;
   }
 
+  .qr-image-wrapper canvas {
+    width: 180px !important;
+    height: 180px !important;
+  }
+
   .action-button {
     font-size: 1rem;
     padding: 1rem;
   }
 }
 
+/* iPhone 14 Pro Max (430x932) 対応 */
+@media (max-width: 430px) {
+  .qr-instruction {
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+}
+
 @media print {
   .action-buttons,
-  .waiting-info,
-  .waiting-preview {
+  .waiting-info {
     display: none;
   }
 }

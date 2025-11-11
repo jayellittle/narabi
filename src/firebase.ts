@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth, connectAuthEmulator } from 'firebase/auth'
 import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
 import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
+import { getStorage, connectStorageEmulator } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyBhOoE7W3RVs3VkCfLYLxVF4EolnlD_0rE',
@@ -12,13 +13,14 @@ const firebaseConfig = {
   appId: '1:654813606842:web:8e5f7e5a7e3d0b8c5e3f7e',
 }
 
-// Firebase 초기화
+// Firebase 초기化
 const app = initializeApp(firebaseConfig)
 
-// 서비스 초기화
+// 서비스 초기化
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const functions = getFunctions(app)
+export const storage = getStorage(app)
 
 // 🔥 Emulator 연결 (로컬 개발 시)
 if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
@@ -32,6 +34,9 @@ if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
 
   // Functions Emulator
   connectFunctionsEmulator(functions, '127.0.0.1', 5001)
+
+  // Storage Emulator
+  connectStorageEmulator(storage, '127.0.0.1', 9199)
 }
 
 export default app

@@ -5,6 +5,31 @@
   </div>
   <div class="login-container">
     <h2 class="login-title">{{ isSignUp ? '会員登録' : 'ログイン' }}</h2>
+
+    <!-- プロフィール写真アップロード (会員登録時のみ) -->
+    <div v-if="isSignUp" class="form-group profile-upload">
+      <div class="profile-image-preview" @click="triggerFileInput">
+        <img v-if="profileImagePreview" :src="profileImagePreview" alt="Profile" />
+        <div v-else class="profile-placeholder">
+          <span class="camera-icon">📷</span>
+          <span class="upload-text">写真を選択</span>
+        </div>
+      </div>
+      <input
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        @change="handleFileSelect"
+        style="display: none"
+      />
+      <p class="hint-text">プロフィール写真（任意）</p>
+    </div>
+
+    <!-- ニックネーム (会員登録時のみ) -->
+    <div v-if="isSignUp" class="form-group">
+      <input type="text" v-model="displayName" placeholder="ニックネーム（任意）" />
+    </div>
+
     <div class="form-group">
       <input type="email" v-model="email" placeholder="メールアドレス" />
     </div>
@@ -17,17 +42,31 @@
       />
     </div>
 
+    <!-- パスワード確認 (会員登録時のみ) -->
+    <div v-if="isSignUp" class="form-group">
+      <input
+        type="password"
+        v-model="passwordConfirm"
+        placeholder="パスワード確認"
+        @keyup.enter="handleSignUp()"
+      />
+    </div>
+
     <div v-if="errorMessage" class="error-message">{{ errorMessage }}</div>
 
     <div v-if="isSignUp">
-      <button @click="handleSignUp" class="main-button">会員登録</button>
+      <button @click="handleSignUp" class="main-button" :disabled="isSubmitting">
+        {{ isSubmitting ? '登録中...' : '会員登録' }}
+      </button>
       <p>
-        アカウントを登録済み　
+        アカウントを登録済み
         <button @click.prevent="isSignUp = false" href="#">ログイン</button>
       </p>
     </div>
     <div v-else>
-      <button @click="handleSignIn" class="main-button">ログイン</button>
+      <button @click="handleSignIn" class="main-button" :disabled="isSubmitting">
+        {{ isSubmitting ? 'ログイン中...' : 'ログイン' }}
+      </button>
       <p>
         新しいアカウントを作る　<button @click.prevent="isSignUp = true" href="#">会員登録</button>
       </p>
@@ -38,31 +77,139 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  updateProfile,
+} from 'firebase/auth'
 import type { AuthError } from 'firebase/auth'
-import { auth } from '../firebase' // ← 여기가 중요!
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
+import { auth, db, storage } from '../firebase'
 
 const router = useRouter()
+const fileInput = ref<HTMLInputElement | null>(null)
 
 const email = ref('')
 const password = ref('')
+const passwordConfirm = ref('')
+const displayName = ref('')
 const errorMessage = ref('')
 const isSignUp = ref(false)
+const isSubmitting = ref(false)
+
+// プロフィール画像
+const profileImageFile = ref<File | null>(null)
+const profileImagePreview = ref<string>('')
+
+const triggerFileInput = () => {
+  fileInput.value?.click()
+}
+
+const handleFileSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (file) {
+    profileImageFile.value = file
+
+    // プレビュー表示
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      profileImagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const uploadProfileImage = async (userId: string): Promise<string | null> => {
+  if (!profileImageFile.value) return null
+
+  try {
+    const imageRef = storageRef(storage, `users/${userId}/profile.jpg`)
+    await uploadBytes(imageRef, profileImageFile.value)
+    const downloadUrl = await getDownloadURL(imageRef)
+    return downloadUrl
+  } catch (error) {
+    console.error('プロフィール画像のアップロード失敗:', error)
+    return null
+  }
+}
 
 const handleSignUp = async () => {
   errorMessage.value = ''
+
+  // バリデーション
+  if (!email.value || !password.value) {
+    errorMessage.value = 'メールアドレスとパスワードを入力してください。'
+    return
+  }
+
+  if (password.value !== passwordConfirm.value) {
+    errorMessage.value = 'パスワードが一致しません。'
+    return
+  }
+
+  if (password.value.length < 6) {
+    errorMessage.value = 'パスワードは6文字以上で設定してください。'
+    return
+  }
+
+  isSubmitting.value = true
+
   try {
-    await createUserWithEmailAndPassword(auth, email.value, password.value)
+    // ユーザー作成
+    const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value)
+    const user = userCredential.user
+
+    // プロフィール画像をアップロード
+    let profileImageUrl: string | null = null
+    if (profileImageFile.value) {
+      profileImageUrl = await uploadProfileImage(user.uid)
+    }
+
+    // Firebase Authのプロフィール更新
+    await updateProfile(user, {
+      displayName: displayName.value || null,
+      photoURL: profileImageUrl,
+    })
+
+    // Firestoreにユーザー情報を保存
+    await setDoc(doc(db, 'users', user.uid), {
+      uid: user.uid,
+      email: user.email,
+      displayName: displayName.value || null,
+      profileImageUrl: profileImageUrl,
+      createdAt: serverTimestamp(),
+    })
+
+    // メール認証送信
+    await sendEmailVerification(user)
+    alert(
+      '会員登録が完了しました！\n確認メールを送信しました。メールをご確認ください。',
+    )
+
     router.push('/dashboard')
   } catch (error: unknown) {
     const authError = error as AuthError
     console.error('会員登録エラー:', authError)
     errorMessage.value = getErrorMessage(authError.code)
+  } finally {
+    isSubmitting.value = false
   }
 }
 
 const handleSignIn = async () => {
   errorMessage.value = ''
+
+  if (!email.value || !password.value) {
+    errorMessage.value = 'メールアドレスとパスワードを入力してください。'
+    return
+  }
+
+  isSubmitting.value = true
+
   try {
     await signInWithEmailAndPassword(auth, email.value, password.value)
     router.push('/dashboard')
@@ -70,6 +217,8 @@ const handleSignIn = async () => {
     const authError = error as AuthError
     console.error('ログインエラー:', authError)
     errorMessage.value = getErrorMessage(authError.code)
+  } finally {
+    isSubmitting.value = false
   }
 }
 
@@ -147,6 +296,62 @@ const getErrorMessage = (errorCode: string): string => {
   border-color: #4caf50;
 }
 
+/* プロフィール画像アップロード */
+.profile-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.profile-image-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+  border: 3px solid #ddd;
+  transition: border-color 0.3s;
+  background-color: #f5f5f5;
+}
+
+.profile-image-preview:hover {
+  border-color: #4caf50;
+}
+
+.profile-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+}
+
+.camera-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.upload-text {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.hint-text {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+  text-align: center;
+}
+
 .error-message {
   color: #f44336;
   background-color: #ffebee;
@@ -166,10 +371,16 @@ const getErrorMessage = (errorCode: string): string => {
   font-size: 16px;
   cursor: pointer;
   margin-bottom: 20px;
+  transition: background-color 0.3s;
 }
 
-.main-button:hover {
+.main-button:hover:not(:disabled) {
   background-color: #1976d2;
+}
+
+.main-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 p {
@@ -188,5 +399,21 @@ p button {
 
 p button:hover {
   color: #1976d2;
+}
+
+/* モバイル対応 */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 20px 16px;
+  }
+
+  .profile-image-preview {
+    width: 100px;
+    height: 100px;
+  }
+
+  .camera-icon {
+    font-size: 2rem;
+  }
 }
 </style>

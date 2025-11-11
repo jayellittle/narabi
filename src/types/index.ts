@@ -4,6 +4,7 @@ export interface Store {
   address: string
   phoneNumber: string
   googleMapsUrl?: string
+  imageUrl?: string
   status: 'pending' | 'approved' | 'rejected'
   ownerId: string
   ownerEmail: string
@@ -20,6 +21,16 @@ export interface StaffMember {
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
   invitedAt: any
+  displayName?: string
+  profileImageUrl?: string
+}
+
+export interface User {
+  uid: string
+  email: string
+  displayName?: string
+  profileImageUrl?: string
+  createdAt: any
 }
 
 export interface WaitingCustomer {

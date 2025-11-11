@@ -9,21 +9,21 @@
       <router-link :to="`/store/${storeId}/qr`" class="menu-card qr">
         <div class="menu-icon">📱</div>
         <h2>QRコード表示</h2>
-        <p>お客様が順番待ちに登録するためのQRコードを表示・印刷します</p>
+        <p class="menu-description">お客様が順番待ちに登録するためのQRコードを表示・印刷します</p>
         <div class="menu-arrow">→</div>
       </router-link>
 
       <router-link :to="`/store/${storeId}/waiting`" class="menu-card waiting">
         <div class="menu-icon">👥</div>
         <h2>順番待ちリスト</h2>
-        <p>現在待機中のお客様を確認し、呼び出しを行います</p>
+        <p class="menu-description">現在待機中のお客様を確認し、呼び出しを行います</p>
         <div class="menu-arrow">→</div>
       </router-link>
 
       <router-link :to="`/store/${storeId}/staff`" class="menu-card staff">
         <div class="menu-icon">⚙️</div>
         <h2>スタッフ管理</h2>
-        <p>店舗スタッフの招待・管理を行います</p>
+        <p class="menu-description">店舗スタッフの招待・管理を行います</p>
         <div class="menu-arrow">→</div>
       </router-link>
     </div>
@@ -166,7 +166,7 @@ const storeId = route.params.storeId as string
   font-weight: 600;
 }
 
-.menu-card p {
+.menu-description {
   margin: 0;
   font-size: 0.85rem;
   color: #666;
@@ -213,21 +213,26 @@ const storeId = route.params.storeId as string
   }
 
   .menu-card {
-    padding: 2rem 1.5rem;
+    padding: 1.5rem 1.25rem;
   }
 
   .menu-icon {
-    font-size: 3rem;
-    width: 80px;
-    height: 80px;
+    font-size: 2.5rem;
+    width: 70px;
+    height: 70px;
   }
 
   .menu-card h2 {
-    font-size: 1.3rem;
+    font-size: 1.2rem;
   }
 
-  .menu-card p {
-    font-size: 0.9rem;
+  /* モバイルでは説明文を非表示 */
+  .menu-description {
+    display: none;
+  }
+
+  .menu-arrow {
+    margin-top: 0.5rem;
   }
 
   /* モバイルではhoverの代わりにタップ効果 */
