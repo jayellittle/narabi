@@ -20,7 +20,7 @@ const route = useRoute()
 const router = useRouter()
 const auth = getAuth()
 const db = getFirestore()
-const { getStore, inviteStaff, respondToInvitation } = useFirebase()
+const { getStore, inviteStaff, respondToInvitation, updateStaffDisplayName } = useFirebase()
 const { formatTimestamp } = useTimeFormat()
 
 const storeId = ref(route.params.storeId as string)
@@ -409,25 +409,11 @@ const handleUpdateDisplayName = async () => {
   isUpdatingDisplayName.value = true
 
   try {
-    const storeRef = doc(db, 'stores', storeId.value)
-    const storeDoc = await getDoc(storeRef)
+    await updateStaffDisplayName(storeId.value, displayNameForm.value.displayName.trim())
 
-    if (storeDoc.exists()) {
-      const staffList = storeDoc.data().staffList || []
-      const updatedStaffList = staffList.map((staff: any) =>
-        staff.email === currentUserEmail.value
-          ? { ...staff, displayName: displayNameForm.value.displayName.trim() }
-          : staff
-      )
-
-      await updateDoc(storeRef, {
-        staffList: updatedStaffList,
-      })
-
-      alert('表示名を更新しました。')
-      showDisplayNameModal.value = false
-      await loadStore()
-    }
+    alert('表示名を更新しました。')
+    showDisplayNameModal.value = false
+    await loadStore()
   } catch (err: any) {
     console.error('표시명 업데이트 실패:', err)
     alert(err.message || '表示名の更新に失敗しました。')

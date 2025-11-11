@@ -593,6 +593,71 @@ export const respondToStaffInvitation = functions
   })
 
 // ========================================
+// 신규 함수: 스태프 표시명 업데이트
+// ========================================
+export const updateStaffDisplayName = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    const { storeId, displayName } = data
+
+    if (!storeId || !displayName) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDと表示名は必須です。')
+    }
+
+    try {
+      const storeDoc = await db.collection('stores').doc(storeId).get()
+      if (!storeDoc.exists) {
+        throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+      }
+
+      const storeData = storeDoc.data() as StoreInfo
+      const userEmail = context.auth.token.email
+
+      // 스태프 목록에서 현재 사용자 찾기
+      const staffIndex = storeData.staffList?.findIndex(
+        (staff) => staff.email === userEmail && staff.status === 'active',
+      )
+
+      if (staffIndex === undefined || staffIndex === -1) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'このストアのスタッフではありません。',
+        )
+      }
+
+      // 표시명 업데이트
+      const updatedStaffList = [...(storeData.staffList || [])]
+      updatedStaffList[staffIndex] = {
+        ...updatedStaffList[staffIndex],
+        displayName: displayName.trim(),
+      }
+
+      await db.collection('stores').doc(storeId).update({
+        staffList: updatedStaffList,
+      })
+
+      logger.info('스태프 표시명 업데이트 완료:', {
+        storeId,
+        userEmail,
+        displayName: displayName.trim(),
+      })
+
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof functions.https.HttpsError) {
+        throw error
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('스태프 표시명 업데이트 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', '表示名の更新に失敗しました。')
+    }
+  })
+
+// ========================================
 // 신규 함수: QR 코드 생성
 // ========================================
 export const generateStoreQR = functions.https.onCall(async (data, context) => {

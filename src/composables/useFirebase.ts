@@ -117,6 +117,14 @@ export function useFirebase() {
     return await respondFunc({ storeId, accepted, displayName })
   }
 
+  /**
+   * 스태프 표시명 업데이트
+   */
+  const updateStaffDisplayName = async (storeId: string, displayName: string) => {
+    const updateFunc = httpsCallable(functions, 'updateStaffDisplayName')
+    return await updateFunc({ storeId, displayName })
+  }
+
   // ========================================
   // 대기열 관련
   // ========================================
@@ -196,6 +204,7 @@ export function useFirebase() {
     // 스태프
     inviteStaff,
     respondToInvitation,
+    updateStaffDisplayName,
 
     // 대기열
     subscribeToWaitingList,
