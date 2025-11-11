@@ -885,24 +885,32 @@ h1 {
 
 .staff-details {
   flex: 1;
+  min-width: 0; /* テキストが親要素を超えないようにする */
+  overflow: hidden;
 }
 
 .staff-name {
   font-weight: 500;
   color: #333;
   margin-bottom: 0.25rem;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .staff-email {
   font-weight: 500;
   color: #333;
   margin-bottom: 0.25rem;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .staff-email-small {
   font-size: 0.8rem;
   color: #666;
   margin-bottom: 0.25rem;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 /* you-badge는 ::after 의사 요소로 대체하므로 숨김 */
@@ -1150,30 +1158,31 @@ h1 {
   .staff-card {
     flex-direction: column;
     align-items: flex-start;
-    gap: 1rem;
-    padding: 1.25rem;
+    gap: 0.75rem;
+    padding: 1rem;
     position: relative;
   }
 
   /* 모바일에서 현재 사용자 카드의 하단 패딩 조정 */
   .staff-card.is-current-user {
-    padding-bottom: 2rem;
+    padding-bottom: 1.75rem;
   }
 
   .staff-info {
     width: 100%;
+    gap: 0.75rem;
   }
 
   .staff-icon {
-    width: 60px;
-    height: 60px;
-    min-width: 60px;
-    min-height: 60px;
-    font-size: 2.5rem;
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    min-height: 50px;
+    font-size: 2rem;
   }
 
   .staff-email {
-    font-size: 1rem;
+    font-size: 0.95rem;
   }
 
   .staff-actions {
@@ -1217,22 +1226,55 @@ h1 {
   }
 }
 
-/* 小さいモバイル画面 */
+/* 小さいモバイル画面 (iPhone SE等) */
 @media (max-width: 480px) {
   h1 {
     font-size: 1.3rem;
+  }
+
+  .staff-section {
+    padding: 1rem;
   }
 
   .staff-section h2 {
     font-size: 1.1rem;
   }
 
+  .staff-card {
+    padding: 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .staff-card.is-current-user {
+    padding-bottom: 1.5rem;
+  }
+
+  .staff-info {
+    gap: 0.5rem;
+  }
+
   .staff-icon {
-    width: 50px;
-    height: 50px;
-    min-width: 50px;
-    min-height: 50px;
-    font-size: 2rem;
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
+    min-height: 45px;
+    font-size: 1.75rem;
+  }
+
+  .staff-email {
+    font-size: 0.9rem;
+  }
+
+  .staff-email-small {
+    font-size: 0.75rem;
+  }
+
+  .staff-meta {
+    font-size: 0.8rem;
+  }
+
+  .staff-meta-row {
+    margin-top: 0.15rem;
   }
 }
 </style>
