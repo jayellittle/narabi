@@ -30,6 +30,7 @@ interface Store {
   phoneNumber: string
   status?: string
   hasPendingRequest?: boolean
+  isAlreadyMember?: boolean
 }
 
 const stores = ref<Store[]>([])
@@ -44,14 +45,20 @@ const newStore = ref({
   googleMapsUrl: '',
 })
 const requestMessage = ref('')
+const displayName = ref('')
 
 // 제출 상태
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
+// 리퀘스트 모달
+const showRequestModal = ref(false)
+const selectedStoreId = ref('')
+const selectedStoreName = ref('')
+
 // 검색된 매장 목록
 const filteredStores = computed(() => {
-  if (!storeSearch.value) return stores.value
+  if (!storeSearch.value.trim()) return []
 
   const search = storeSearch.value.toLowerCase()
   return stores.value.filter(
@@ -83,14 +90,22 @@ const loadStores = async () => {
       pendingRequestsSnapshot.docs.map(doc => doc.data().storeId)
     )
 
-    stores.value = snapshot.docs.map(
-      (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-          hasPendingRequest: pendingStoreIds.has(doc.id),
-        }) as Store,
-    )
+    stores.value = snapshot.docs.map((doc) => {
+      const data = doc.data()
+      const staffList = data.staffList || []
+
+      // 이미 스태프 목록에 active 상태로 등록되어 있는지 확인
+      const isAlreadyMember = staffList.some(
+        (staff: any) => staff.email === user.email && staff.status === 'active'
+      )
+
+      return {
+        id: doc.id,
+        ...data,
+        hasPendingRequest: pendingStoreIds.has(doc.id),
+        isAlreadyMember,
+      } as Store
+    })
   } catch (error) {
     console.error('매장 목록 로드 실패:', error)
     errorMessage.value = '店舗リストの読み込みに失敗しました。'
@@ -99,8 +114,31 @@ const loadStores = async () => {
   }
 }
 
-// 기존 매장 참여 요청
-const handleJoinStore = async (storeId: string) => {
+// 모달 열기
+const openRequestModal = (storeId: string, storeName: string) => {
+  selectedStoreId.value = storeId
+  selectedStoreName.value = storeName
+  displayName.value = ''
+  requestMessage.value = ''
+  showRequestModal.value = true
+}
+
+// 모달 닫기
+const closeRequestModal = () => {
+  showRequestModal.value = false
+  selectedStoreId.value = ''
+  selectedStoreName.value = ''
+  displayName.value = ''
+  requestMessage.value = ''
+}
+
+// 기존 매장 참여 요청 제출
+const submitJoinRequest = async () => {
+  if (!displayName.value.trim()) {
+    alert('表示名を入力してください。')
+    return
+  }
+
   const user = auth.currentUser
   if (!user) {
     alert('ログインが必要です。')
@@ -112,6 +150,8 @@ const handleJoinStore = async (storeId: string) => {
   errorMessage.value = ''
 
   try {
+    const storeId = selectedStoreId.value
+
     // 1. 이미 스태프로 등록되어 있는지 확인
     const storeRef = doc(db, 'stores', storeId)
     const storeDoc = await getDoc(storeRef)
@@ -124,6 +164,7 @@ const handleJoinStore = async (storeId: string) => {
 
       if (isAlreadyStaff) {
         alert('既にこの店舗のスタッフとして登録されています。')
+        closeRequestModal()
         router.push('/dashboard')
         return
       }
@@ -134,6 +175,7 @@ const handleJoinStore = async (storeId: string) => {
 
       if (isPending) {
         alert('既に招待を受けています。スタッフ管理ページで承認してください。')
+        closeRequestModal()
         router.push('/dashboard')
         return
       }
@@ -153,6 +195,7 @@ const handleJoinStore = async (storeId: string) => {
 
     if (pendingRequest) {
       alert('既に参加リクエストを送信しています。承認をお待ちください。')
+      closeRequestModal()
       router.push('/dashboard')
       return
     }
@@ -164,11 +207,13 @@ const handleJoinStore = async (storeId: string) => {
       await updateDoc(doc(db, 'storeJoinRequests', rejectedRequest.id), {
         status: 'pending',
         userId: user.uid,
+        displayName: displayName.value.trim() || null,
         message: requestMessage.value,
         createdAt: serverTimestamp(),
       })
 
       alert('参加リクエストを送信しました。承認をお待ちください。')
+      closeRequestModal()
       router.push('/dashboard')
       return
     }
@@ -178,12 +223,14 @@ const handleJoinStore = async (storeId: string) => {
       storeId,
       userId: user.uid,
       userEmail: user.email || '',
+      displayName: displayName.value.trim() || null,
       message: requestMessage.value,
       status: 'pending',
       createdAt: serverTimestamp(),
     })
 
     alert('参加リクエストを送信しました。承認をお待ちください。')
+    closeRequestModal()
     router.push('/dashboard')
   } catch (error: any) {
     console.error('참여 요청 실패:', error)
@@ -294,24 +341,21 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
             <h3>{{ store.name }}</h3>
             <p class="address">📍 {{ store.address }}</p>
             <p class="phone">📞 {{ store.phoneNumber }}</p>
+            <p v-if="store.isAlreadyMember" class="already-member">✓ 登録済み</p>
           </div>
-          <button @click="handleJoinStore(store.id)" :disabled="isSubmitting || store.hasPendingRequest" class="join-button">
-            {{ store.hasPendingRequest ? '承認待ち' : '登録リクエストを送る' }}
+          <button
+            v-if="!store.isAlreadyMember"
+            @click="openRequestModal(store.id, store.name)"
+            :disabled="store.hasPendingRequest"
+            class="join-button"
+          >
+            {{ store.hasPendingRequest ? 'リクエスト済み' : '登録リクエストを送る' }}
           </button>
         </div>
 
-        <div v-if="filteredStores.length === 0" class="no-results">
+        <div v-if="filteredStores.length === 0 && storeSearch.trim()" class="no-results">
           該当する店舗が見つかりませんでした。
         </div>
-      </div>
-
-      <div class="message-box">
-        <label>メッセージ（任意）</label>
-        <textarea
-          v-model="requestMessage"
-          placeholder="店舗オーナーへのメッセージを入力してください"
-          rows="3"
-        ></textarea>
       </div>
     </div>
 
@@ -357,15 +401,6 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
           />
         </div>
 
-        <div class="form-group">
-          <label>メッセージ（任意）</label>
-          <textarea
-            v-model="requestMessage"
-            placeholder="承認担当者へのメッセージを入力してください"
-            rows="4"
-          ></textarea>
-        </div>
-
         <button type="submit" :disabled="isSubmitting" class="submit-button">
           {{ isSubmitting ? '送信中...' : '生成' }}
         </button>
@@ -374,6 +409,44 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
 
     <div class="back-link">
       <router-link to="/dashboard">← ダッシュボードに戻る</router-link>
+    </div>
+
+    <!-- 登録リクエストモダル -->
+    <div v-if="showRequestModal" class="modal-overlay" @click="closeRequestModal">
+      <div class="modal-content" @click.stop>
+        <h2>登録リクエスト</h2>
+        <p class="modal-store-name">{{ selectedStoreName }}</p>
+
+        <form @submit.prevent="submitJoinRequest" class="request-form">
+          <div class="form-group">
+            <label>表示名 <span class="required">*</span></label>
+            <input
+              v-model="displayName"
+              type="text"
+              placeholder="例：山田 太郎"
+              required
+              autofocus
+            />
+            <p class="form-hint">店舗内で表示される名前です。</p>
+          </div>
+
+          <div class="form-group">
+            <label>メッセージ（任意）</label>
+            <textarea
+              v-model="requestMessage"
+              placeholder="店舗オーナーへのメッセージを入力してください"
+              rows="3"
+            ></textarea>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" @click="closeRequestModal" class="cancel-button">キャンセル</button>
+            <button type="submit" :disabled="isSubmitting" class="submit-button">
+              {{ isSubmitting ? '送信中...' : 'リクエストを送る' }}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 </template>
@@ -475,6 +548,12 @@ h1 {
 .store-info p {
   margin: 0.25rem 0;
   color: #666;
+  font-size: 0.9rem;
+}
+
+.already-member {
+  color: #4caf50;
+  font-weight: 500;
   font-size: 0.9rem;
 }
 
@@ -599,5 +678,122 @@ h1 {
 
 .back-link a:hover {
   text-decoration: underline;
+}
+
+/* モダル */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.modal-content h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.modal-store-name {
+  margin: 0 0 1.5rem 0;
+  color: #4caf50;
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.required {
+  color: #f44336;
+}
+
+.form-group input,
+.form-group textarea {
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4caf50;
+}
+
+.form-hint {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.cancel-button,
+.submit-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.cancel-button {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.cancel-button:hover {
+  background-color: #e0e0e0;
+}
+
+.submit-button {
+  background-color: #4caf50;
+  color: white;
+}
+
+.submit-button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 </style>

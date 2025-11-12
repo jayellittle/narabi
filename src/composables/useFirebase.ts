@@ -112,9 +112,17 @@ export function useFirebase() {
   /**
    * 스태프 초대 응답
    */
-  const respondToInvitation = async (storeId: string, accepted: boolean) => {
+  const respondToInvitation = async (storeId: string, accepted: boolean, displayName?: string) => {
     const respondFunc = httpsCallable(functions, 'respondToStaffInvitation')
-    return await respondFunc({ storeId, accepted })
+    return await respondFunc({ storeId, accepted, displayName })
+  }
+
+  /**
+   * 스태프 표시명 업데이트
+   */
+  const updateStaffDisplayName = async (storeId: string, displayName: string) => {
+    const updateFunc = httpsCallable(functions, 'updateStaffDisplayName')
+    return await updateFunc({ storeId, displayName })
   }
 
   // ========================================
@@ -196,6 +204,7 @@ export function useFirebase() {
     // 스태프
     inviteStaff,
     respondToInvitation,
+    updateStaffDisplayName,
 
     // 대기열
     subscribeToWaitingList,

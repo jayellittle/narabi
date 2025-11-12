@@ -53,6 +53,7 @@ interface StaffMember {
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
   invitedAt: admin.firestore.Timestamp
+  displayName?: string
 }
 
 // ========================================
@@ -440,9 +441,46 @@ export const inviteStaff = functions
         throw new functions.https.HttpsError('permission-denied', '権限がありません。')
       }
 
+      // 이메일로 사용자가 등록되어 있는지 확인
+      try {
+        await admin.auth().getUserByEmail(email)
+      } catch (error: any) {
+        if (error.code === 'auth/user-not-found') {
+          throw new functions.https.HttpsError('not-found', 'このメールアドレスは登録されていません。')
+        }
+        throw error
+      }
+
       // 이미 스태프 목록에 있는지 확인
       const existingStaff = storeData.staffList?.find((staff) => staff.email === email)
       if (existingStaff) {
+        // rejected 상태인 경우는 다시 초대 가능
+        if (existingStaff.status === 'rejected') {
+          // rejected 상태를 pending으로 변경
+          const updatedStaffList = storeData.staffList?.map((staff) =>
+            staff.email === email
+              ? {
+                  email,
+                  role: role || staff.role,
+                  status: 'pending' as const,
+                  invitedAt: new Date(),
+                }
+              : staff,
+          )
+
+          await db.collection('stores').doc(storeId).update({
+            staffList: updatedStaffList,
+          })
+
+          logger.info('거절된 스태프 재초대 완료:', {
+            storeId,
+            email,
+            invitedBy: context.auth.uid,
+          })
+
+          return { success: true }
+        }
+
         throw new functions.https.HttpsError('already-exists', '既に招待されています。')
       }
 
@@ -486,7 +524,7 @@ export const respondToStaffInvitation = functions
       throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
     }
 
-    const { storeId, accepted } = data
+    const { storeId, accepted, displayName } = data
 
     if (!storeId || accepted === undefined) {
       throw new functions.https.HttpsError('invalid-argument', '店舗IDと応答は必須です。')
@@ -513,13 +551,14 @@ export const respondToStaffInvitation = functions
       // 스태프 상태 업데이트
       const updatedStaffList = [...(storeData.staffList || [])]
       if (accepted) {
-        // 승인시: userId를 설정
+        // 승인시: userId와 displayName을 설정
         updatedStaffList[staffIndex] = {
           email: updatedStaffList[staffIndex].email,
           role: updatedStaffList[staffIndex].role,
           invitedAt: updatedStaffList[staffIndex].invitedAt,
           status: 'active',
           userId: context.auth.uid,
+          displayName: displayName || null,
         }
       } else {
         // 거절시: userId 없이 객체 생성
@@ -539,6 +578,7 @@ export const respondToStaffInvitation = functions
         storeId,
         userEmail,
         accepted,
+        displayName: displayName || null,
       })
 
       return { success: true }
@@ -549,6 +589,80 @@ export const respondToStaffInvitation = functions
       const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error('스태프 초대 응답 실패:', errorMessage)
       throw new functions.https.HttpsError('internal', '招待への応答に失敗しました。')
+    }
+  })
+
+// ========================================
+// 신규 함수: 스태프 표시명 업데이트
+// ========================================
+export const updateStaffDisplayName = functions
+  .runWith(runtimeOptsWithSecrets)
+  .https.onCall(async (data, context) => {
+    if (!context.auth) {
+      throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+    }
+
+    const { storeId, displayName } = data
+
+    if (!storeId) {
+      throw new functions.https.HttpsError('invalid-argument', '店舗IDは必須です。')
+    }
+
+    // displayNameはnullまたは空文字列を許可（表示名削除のため）
+    const newDisplayName = displayName && displayName.trim() ? displayName.trim() : null
+
+    try {
+      const storeDoc = await db.collection('stores').doc(storeId).get()
+      if (!storeDoc.exists) {
+        throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+      }
+
+      const storeData = storeDoc.data() as StoreInfo
+      const userEmail = context.auth.token.email
+
+      // 스태프 목록에서 현재 사용자 찾기
+      const staffIndex = storeData.staffList?.findIndex(
+        (staff) => staff.email === userEmail && staff.status === 'active',
+      )
+
+      if (staffIndex === undefined || staffIndex === -1) {
+        throw new functions.https.HttpsError(
+          'permission-denied',
+          'このストアのスタッフではありません。',
+        )
+      }
+
+      // 표시명 업데이트
+      const updatedStaffList = [...(storeData.staffList || [])]
+      if (newDisplayName) {
+        updatedStaffList[staffIndex] = {
+          ...updatedStaffList[staffIndex],
+          displayName: newDisplayName,
+        }
+      } else {
+        // displayNameを削除
+        const { displayName: _, ...staffWithoutDisplayName } = updatedStaffList[staffIndex]
+        updatedStaffList[staffIndex] = staffWithoutDisplayName as StaffMember
+      }
+
+      await db.collection('stores').doc(storeId).update({
+        staffList: updatedStaffList,
+      })
+
+      logger.info('스태프 표시명 업데이트 완료:', {
+        storeId,
+        userEmail,
+        displayName: newDisplayName,
+      })
+
+      return { success: true }
+    } catch (error: unknown) {
+      if (error instanceof functions.https.HttpsError) {
+        throw error
+      }
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      logger.error('스태프 표시명 업데이트 실패:', errorMessage)
+      throw new functions.https.HttpsError('internal', '表示名の更新に失敗しました。')
     }
   })
 
