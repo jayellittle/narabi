@@ -10,6 +10,7 @@
     <div v-if="verificationSent" class="success-message">
       <p>{{ email }}に認証メールを送信しました。</p>
       <p>メール内のリンクをクリックして、アカウントを有効化してください。</p>
+      <button @click="backToLogin" class="back-to-login-button">ログインページに戻る</button>
     </div>
 
     <div v-else>
@@ -148,14 +149,36 @@ const removeProfileImage = () => {
   }
 }
 
+const backToLogin = () => {
+  verificationSent.value = false
+  isSignUp.value = false
+  email.value = ''
+  password.value = ''
+  passwordConfirm.value = ''
+  displayName.value = ''
+  errorMessage.value = ''
+}
+
 const handleSignUp = async () => {
   errorMessage.value = ''
   loading.value = true
 
   try {
     // バリデーション
-    if (!email.value || !password.value || !passwordConfirm.value) {
-      errorMessage.value = 'メールアドレスとパスワードを入力してください。'
+    if (!email.value) {
+      errorMessage.value = 'メールアドレスを入力してください。'
+      loading.value = false
+      return
+    }
+
+    if (!password.value) {
+      errorMessage.value = 'パスワードを入力してください。'
+      loading.value = false
+      return
+    }
+
+    if (!passwordConfirm.value) {
+      errorMessage.value = 'パスワード確認を入力してください。'
       loading.value = false
       return
     }
@@ -404,6 +427,21 @@ const getErrorMessage = (errorCode: string): string => {
 .success-message p {
   margin: 10px 0;
   color: #2e7d32;
+}
+
+.back-to-login-button {
+  margin-top: 15px;
+  padding: 10px 20px;
+  background-color: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.back-to-login-button:hover {
+  background-color: #1976d2;
 }
 
 .main-button {
