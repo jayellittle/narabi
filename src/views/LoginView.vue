@@ -79,6 +79,34 @@
         <p>
           新しいアカウントを作る　<button @click.prevent="isSignUp = true" href="#">会員登録</button>
         </p>
+        <p class="forgot-password-text">
+          <button @click.prevent="showPasswordReset = true" class="forgot-password-link">
+            パスワードを忘れた場合
+          </button>
+        </p>
+      </div>
+
+      <!-- パスワードリセット画面 -->
+      <div v-if="showPasswordReset" class="password-reset-overlay" @click.self="showPasswordReset = false">
+        <div class="password-reset-modal">
+          <h3>パスワードをリセット</h3>
+          <p class="reset-description">
+            登録したメールアドレスを入力してください。<br />
+            パスワード再設定リンクを送信します。
+          </p>
+          <div class="form-group">
+            <input type="email" v-model="resetEmail" placeholder="メールアドレス" />
+          </div>
+          <div v-if="resetMessage" :class="resetSuccess ? 'success-message' : 'error-message'">
+            {{ resetMessage }}
+          </div>
+          <div class="modal-buttons">
+            <button @click="handlePasswordReset" class="main-button" :disabled="loading">
+              {{ loading ? '送信中...' : 'リセットリンクを送信' }}
+            </button>
+            <button @click="cancelPasswordReset" class="cancel-button">キャンセル</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -91,6 +119,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signOut,
 } from 'firebase/auth'
 import type { AuthError } from 'firebase/auth'
@@ -110,6 +139,52 @@ const errorMessage = ref('')
 const isSignUp = ref(false)
 const loading = ref(false)
 const verificationSent = ref(false)
+const showPasswordReset = ref(false)
+const resetEmail = ref('')
+const resetMessage = ref('')
+const resetSuccess = ref(false)
+
+// パスワードの強度チェック
+const validatePassword = (password: string): { valid: boolean; message: string } => {
+  // 最小8文字
+  if (password.length < 8) {
+    return { valid: false, message: 'パスワードは8文字以上で設定してください。' }
+  }
+
+  // 英文字が含まれているか
+  if (!/[a-zA-Z]/.test(password)) {
+    return { valid: false, message: 'パスワードには英文字を含めてください。' }
+  }
+
+  // 数字が含まれているか
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, message: 'パスワードには数字を含めてください。' }
+  }
+
+  // 連続する同じ文字をチェック (例: aaa, 111)
+  if (/(.)\1{2,}/.test(password)) {
+    return { valid: false, message: 'パスワードに同じ文字を3回以上連続して使用できません。' }
+  }
+
+  // 連続する文字列をチェック (例: abc, 123)
+  for (let i = 0; i < password.length - 2; i++) {
+    const char1 = password.charCodeAt(i)
+    const char2 = password.charCodeAt(i + 1)
+    const char3 = password.charCodeAt(i + 2)
+
+    // 昇順の連続 (abc, 123)
+    if (char2 === char1 + 1 && char3 === char2 + 1) {
+      return { valid: false, message: 'パスワードに連続する文字列を使用できません。（例：abc、123）' }
+    }
+
+    // 降順の連続 (cba, 321)
+    if (char2 === char1 - 1 && char3 === char2 - 1) {
+      return { valid: false, message: 'パスワードに連続する文字列を使用できません。（例：cba、321）' }
+    }
+  }
+
+  return { valid: true, message: '' }
+}
 
 const handleFileSelect = (event: Event) => {
   const target = event.target as HTMLInputElement
@@ -179,6 +254,14 @@ const handleSignUp = async () => {
 
     if (!passwordConfirm.value) {
       errorMessage.value = 'パスワード確認を入力してください。'
+      loading.value = false
+      return
+    }
+
+    // パスワード強度チェック
+    const passwordValidation = validatePassword(password.value)
+    if (!passwordValidation.valid) {
+      errorMessage.value = passwordValidation.message
       loading.value = false
       return
     }
@@ -272,6 +355,46 @@ const handleSignIn = async () => {
     errorMessage.value = getErrorMessage(authError.code)
     loading.value = false
   }
+}
+
+const handlePasswordReset = async () => {
+  resetMessage.value = ''
+  resetSuccess.value = false
+  loading.value = true
+
+  try {
+    if (!resetEmail.value) {
+      resetMessage.value = 'メールアドレスを入力してください。'
+      resetSuccess.value = false
+      loading.value = false
+      return
+    }
+
+    await sendPasswordResetEmail(auth, resetEmail.value)
+    resetMessage.value = `${resetEmail.value}にパスワードリセットのメールを送信しました。`
+    resetSuccess.value = true
+    loading.value = false
+
+    // 3秒後にモーダルを閉じる
+    setTimeout(() => {
+      showPasswordReset.value = false
+      resetEmail.value = ''
+      resetMessage.value = ''
+    }, 3000)
+  } catch (error: unknown) {
+    const authError = error as AuthError
+    console.error('パスワードリセットエラー:', authError)
+    resetMessage.value = getErrorMessage(authError.code)
+    resetSuccess.value = false
+    loading.value = false
+  }
+}
+
+const cancelPasswordReset = () => {
+  showPasswordReset.value = false
+  resetEmail.value = ''
+  resetMessage.value = ''
+  resetSuccess.value = false
 }
 
 const getErrorMessage = (errorCode: string): string => {
@@ -481,5 +604,80 @@ p button {
 
 p button:hover {
   color: #1976d2;
+}
+
+.forgot-password-text {
+  margin-top: 10px;
+}
+
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  text-decoration: underline;
+  font-size: 13px;
+}
+
+.forgot-password-link:hover {
+  color: #2196f3;
+}
+
+.password-reset-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.password-reset-modal {
+  background-color: white;
+  padding: 30px;
+  border-radius: 8px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.password-reset-modal h3 {
+  margin: 0 0 15px 0;
+  font-size: 22px;
+  color: #333;
+  text-align: center;
+}
+
+.reset-description {
+  font-size: 14px;
+  color: #666;
+  text-align: center;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.modal-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cancel-button {
+  width: 100%;
+  padding: 12px;
+  background-color: #f5f5f5;
+  color: #666;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.cancel-button:hover {
+  background-color: #e0e0e0;
 }
 </style>
