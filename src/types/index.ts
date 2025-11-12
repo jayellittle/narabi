@@ -4,6 +4,7 @@ export interface Store {
   address: string
   phoneNumber: string
   googleMapsUrl?: string
+  imageUrl?: string
   status: 'pending' | 'approved' | 'rejected'
   ownerId: string
   ownerEmail: string

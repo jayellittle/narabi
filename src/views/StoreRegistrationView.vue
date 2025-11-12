@@ -14,10 +14,12 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 
 const router = useRouter()
 const db = getFirestore()
 const auth = getAuth()
+const storage = getStorage()
 
 // 모드: 기존 매장 등록 vs 새 매장 생성
 const mode = ref<'existing' | 'new'>('new')
@@ -46,6 +48,10 @@ const newStore = ref({
 })
 const requestMessage = ref('')
 const displayName = ref('')
+
+// 이미지 업로드
+const storeImageFile = ref<File | null>(null)
+const storeImagePreview = ref<string | null>(null)
 
 // 제출 상태
 const isSubmitting = ref(false)
@@ -130,6 +136,55 @@ const closeRequestModal = () => {
   selectedStoreName.value = ''
   displayName.value = ''
   requestMessage.value = ''
+}
+
+// 이미지 선택
+const handleImageSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (file) {
+    if (!file.type.startsWith('image/')) {
+      alert('画像ファイルを選択してください。')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) { // 5MB 제한
+      alert('ファイルサイズは5MB以下にしてください。')
+      return
+    }
+
+    storeImageFile.value = file
+
+    // 미리보기 생성
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      storeImagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 이미지 제거
+const removeImage = () => {
+  storeImageFile.value = null
+  storeImagePreview.value = null
+}
+
+// 이미지 업로드 함수
+const uploadStoreImage = async (storeId: string): Promise<string | null> => {
+  if (!storeImageFile.value) return null
+
+  try {
+    const fileName = `stores/${storeId}/${Date.now()}_${storeImageFile.value.name}`
+    const imageRef = storageRef(storage, fileName)
+    await uploadBytes(imageRef, storeImageFile.value)
+    const downloadURL = await getDownloadURL(imageRef)
+    return downloadURL
+  } catch (error) {
+    console.error('画像アップロード失敗:', error)
+    return null
+  }
 }
 
 // 기존 매장 참여 요청 제출
@@ -287,6 +342,16 @@ const handleCreateStore = async () => {
       createdAt: serverTimestamp(),
     })
 
+    // 이미지 업로드 및 URL 저장
+    if (storeImageFile.value) {
+      const imageUrl = await uploadStoreImage(docRef.id)
+      if (imageUrl) {
+        await updateDoc(doc(db, 'stores', docRef.id), {
+          imageUrl,
+        })
+      }
+    }
+
     alert('店舗を作成しました！')
     router.push(`/dashboard/${docRef.id}`)
   } catch (error: any) {
@@ -399,6 +464,29 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
             type="url"
             placeholder="https://maps.google.com/..."
           />
+        </div>
+
+        <div class="form-group">
+          <label>店舗画像（任意）</label>
+          <div class="image-upload-container">
+            <div v-if="storeImagePreview" class="image-preview">
+              <img :src="storeImagePreview" alt="店舗画像プレビュー" />
+              <button type="button" @click="removeImage" class="remove-image-btn">✕</button>
+            </div>
+            <label v-else class="image-upload-label">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleImageSelect"
+                style="display: none"
+              />
+              <div class="upload-placeholder">
+                <span class="upload-icon">📷</span>
+                <span>画像をアップロード</span>
+              </div>
+            </label>
+          </div>
+          <p class="form-hint">店舗の写真をアップロードできます（最大5MB）</p>
         </div>
 
         <button type="submit" :disabled="isSubmitting" class="submit-button">
@@ -663,6 +751,80 @@ h1 {
 .submit-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+}
+
+/* 이미지 업로드 */
+.image-upload-container {
+  margin-top: 0.5rem;
+}
+
+.image-upload-label {
+  display: block;
+  cursor: pointer;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  transition: all 0.3s;
+}
+
+.upload-placeholder:hover {
+  border-color: #4caf50;
+  background-color: #f1f8f4;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+}
+
+.image-preview {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+  max-width: 400px;
+}
+
+.image-preview img {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  background-color: rgba(244, 67, 54, 0.9);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s;
+}
+
+.remove-image-btn:hover {
+  background-color: rgba(198, 40, 40, 1);
+}
+
+.form-hint {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.85rem;
+  color: #666;
 }
 
 .back-link {
