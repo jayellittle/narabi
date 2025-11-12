@@ -50,6 +50,13 @@
               {{ profileImage ? profileImage.name : 'プロフィール画像を選択（任意）' }}
             </span>
           </label>
+          <!-- プロフィール画像プレビュー -->
+          <div v-if="profileImagePreview" class="image-preview-container">
+            <img :src="profileImagePreview" alt="プロフィール画像プレビュー" class="image-preview" />
+            <button @click="removeProfileImage" type="button" class="remove-image-button">
+              ✕ 削除
+            </button>
+          </div>
         </div>
       </div>
 
@@ -97,6 +104,7 @@ const password = ref('')
 const passwordConfirm = ref('')
 const displayName = ref('')
 const profileImage = ref<File | null>(null)
+const profileImagePreview = ref<string>('')
 const errorMessage = ref('')
 const isSignUp = ref(false)
 const loading = ref(false)
@@ -118,6 +126,25 @@ const handleFileSelect = (event: Event) => {
     }
     profileImage.value = file
     errorMessage.value = ''
+
+    // プレビュー画像を生成
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        profileImagePreview.value = e.target.result as string
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+const removeProfileImage = () => {
+  profileImage.value = null
+  profileImagePreview.value = ''
+  // ファイル入力をリセット
+  const fileInput = document.querySelector('.file-input') as HTMLInputElement
+  if (fileInput) {
+    fileInput.value = ''
   }
 }
 
@@ -176,6 +203,10 @@ const handleSignUp = async () => {
     // 成功メッセージを表示
     verificationSent.value = true
     loading.value = false
+
+    // フォームをリセット
+    profileImage.value = null
+    profileImagePreview.value = ''
   } catch (error: unknown) {
     const authError = error as AuthError
     console.error('会員登録エラー:', authError)
@@ -320,6 +351,36 @@ const getErrorMessage = (errorCode: string): string => {
 
 .file-upload-button:hover {
   background-color: #e0e0e0;
+}
+
+.image-preview-container {
+  margin-top: 15px;
+  text-align: center;
+  position: relative;
+}
+
+.image-preview {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  border: 2px solid #ddd;
+  object-fit: cover;
+}
+
+.remove-image-button {
+  display: block;
+  margin: 10px auto 0;
+  padding: 8px 16px;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.remove-image-button:hover {
+  background-color: #d32f2f;
 }
 
 .error-message {
