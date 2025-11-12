@@ -176,7 +176,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { signOut } from 'firebase/auth'
 import { useRouter, useRoute } from 'vue-router'
 import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore'
@@ -218,6 +218,7 @@ const editableProfile = ref({
 })
 const profileImageFile = ref<File | null>(null)
 const profileImagePreview = ref<string | null>(null)
+const profileImageToDelete = ref(false)
 const isUpdatingProfile = ref(false)
 
 // 현재 선택된 매장
@@ -376,6 +377,7 @@ const openProfileModal = () => {
   }
   profileImagePreview.value = null
   profileImageFile.value = null
+  profileImageToDelete.value = false
   showProfileModal.value = true
 }
 
@@ -384,6 +386,7 @@ const closeProfileModal = () => {
   showProfileModal.value = false
   profileImagePreview.value = null
   profileImageFile.value = null
+  profileImageToDelete.value = false
 }
 
 // 프로필 이미지 선택
@@ -416,6 +419,12 @@ const handleProfileImageSelect = (event: Event) => {
 const removeProfileImage = () => {
   profileImageFile.value = null
   profileImagePreview.value = null
+  profileImageToDelete.value = true
+
+  // 기존 프로필 이미지도 UI에서 즉시 제거
+  if (userProfile.value) {
+    userProfile.value.profileImageUrl = ''
+  }
 }
 
 // 프로필 업데이트
@@ -433,8 +442,12 @@ const handleProfileUpdate = async () => {
       displayName: editableProfile.value.displayName,
     }
 
-    // 이미지 업로드
-    if (profileImageFile.value) {
+    // 이미지 삭제
+    if (profileImageToDelete.value && !profileImageFile.value) {
+      updates.profileImageUrl = ''
+    }
+    // 새 이미지 업로드
+    else if (profileImageFile.value) {
       const fileName = `users/${user.uid}/profile/${Date.now()}_${profileImageFile.value.name}`
       const imageRef = storageRef(storage, fileName)
       await uploadBytes(imageRef, profileImageFile.value)
@@ -448,7 +461,7 @@ const handleProfileUpdate = async () => {
     // 로컬 상태 업데이트
     if (userProfile.value) {
       userProfile.value.displayName = editableProfile.value.displayName
-      if (updates.profileImageUrl) {
+      if ('profileImageUrl' in updates) {
         userProfile.value.profileImageUrl = updates.profileImageUrl
       }
     }
@@ -466,6 +479,14 @@ const handleProfileUpdate = async () => {
 onMounted(() => {
   loadUserProfile()
   loadStores()
+})
+
+// route가 변경될 때 점포 목록 새로고침
+watch(() => route.path, (newPath, oldPath) => {
+  // dashboard 페이지로 돌아왔을 때만 새로고침
+  if (newPath === '/dashboard' && oldPath !== '/dashboard') {
+    loadStores()
+  }
 })
 </script>
 
@@ -1002,6 +1023,14 @@ onMounted(() => {
     border-right: none;
     border-bottom: 1px solid #e0e0e0;
     padding: 1rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .profile-section {
+    width: 100%;
+    max-width: 600px;
   }
 
   .profile-header h2 {

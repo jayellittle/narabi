@@ -353,7 +353,7 @@ const handleCreateStore = async () => {
     }
 
     alert('店舗を作成しました！')
-    router.push(`/dashboard/${docRef.id}`)
+    router.push('/dashboard')
   } catch (error: any) {
     console.error('매장 등록 실패:', error)
     errorMessage.value = error.message || '店舗登録に失敗しました。'
