@@ -279,14 +279,22 @@ const handleCreateStore = async () => {
       createdAt: serverTimestamp(),
     })
 
-    // 店舗画像をアップロード
+    // 店舗画像をアップロード（失敗してもスキップ）
     if (storeImageFile.value) {
-      const imageUrl = await uploadStoreImage(docRef.id)
-      if (imageUrl) {
-        // 店舗ドキュメントにimageUrlを追加
-        await updateDoc(doc(db, 'stores', docRef.id), {
-          imageUrl: imageUrl,
-        })
+      try {
+        const imageUrl = await uploadStoreImage(docRef.id)
+        if (imageUrl) {
+          // 店舗ドキュメントにimageUrlを追加
+          await updateDoc(doc(db, 'stores', docRef.id), {
+            imageUrl: imageUrl,
+          })
+          console.log('店舗画像アップロード成功')
+        } else {
+          console.log('店舗画像アップロードスキップ（Storageエラー）')
+        }
+      } catch (uploadError) {
+        console.error('店舗画像アップロードエラー（続行）:', uploadError)
+        // エラーでも続行
       }
     }
 
