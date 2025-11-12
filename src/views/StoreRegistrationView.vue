@@ -92,12 +92,22 @@ const uploadStoreImage = async (storeId: string): Promise<string | null> => {
   if (!storeImageFile.value) return null
 
   try {
-    const imageRef = storageRef(storage, `stores/${storeId}/store.jpg`)
-    await uploadBytes(imageRef, storeImageFile.value)
-    const downloadUrl = await getDownloadURL(imageRef)
-    return downloadUrl
-  } catch (error) {
-    console.error('店舗画像のアップロード失敗:', error)
+    // タイムアウト付きでアップロード
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Upload timeout')), 3000)
+    })
+
+    const uploadPromise = (async () => {
+      const imageRef = storageRef(storage, `stores/${storeId}/store.jpg`)
+      await uploadBytes(imageRef, storeImageFile.value!)
+      const downloadUrl = await getDownloadURL(imageRef)
+      return downloadUrl
+    })()
+
+    const result = await Promise.race([uploadPromise, timeoutPromise])
+    return result
+  } catch (error: any) {
+    console.error('店舗画像のアップロード失敗:', error.message || error)
     return null
   }
 }

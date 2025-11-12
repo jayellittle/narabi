@@ -82,6 +82,7 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   updateProfile,
+  signOut,
 } from 'firebase/auth'
 import type { AuthError } from 'firebase/auth'
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
@@ -127,12 +128,22 @@ const uploadProfileImage = async (userId: string): Promise<string | null> => {
   if (!profileImageFile.value) return null
 
   try {
-    const imageRef = storageRef(storage, `users/${userId}/profile.jpg`)
-    await uploadBytes(imageRef, profileImageFile.value)
-    const downloadUrl = await getDownloadURL(imageRef)
-    return downloadUrl
-  } catch (error) {
-    console.error('プロフィール画像のアップロード失敗:', error)
+    // タイムアウト付きでアップロード
+    const timeoutPromise = new Promise<null>((_, reject) => {
+      setTimeout(() => reject(new Error('Upload timeout')), 3000)
+    })
+
+    const uploadPromise = (async () => {
+      const imageRef = storageRef(storage, `users/${userId}/profile.jpg`)
+      await uploadBytes(imageRef, profileImageFile.value!)
+      const downloadUrl = await getDownloadURL(imageRef)
+      return downloadUrl
+    })()
+
+    const result = await Promise.race([uploadPromise, timeoutPromise])
+    return result
+  } catch (error: any) {
+    console.error('プロフィール画像のアップロード失敗:', error.message || error)
     // Storage Emulatorが起動していない場合などでもエラーを無視して続行
     return null
   }
@@ -219,16 +230,32 @@ const handleSignUp = async () => {
     try {
       await sendEmailVerification(user)
       console.log('確認メール送信成功')
-      alert(
-        '会員登録が完了しました！\n確認メールを送信しました。メールをご確認ください。',
-      )
     } catch (emailError) {
       console.error('確認メール送信エラー（続行）:', emailError)
-      // Emulator環境では失敗する可能性があるが、登録は成功
-      alert('会員登録が完了しました！')
     }
 
-    router.push('/dashboard')
+    // 会員登録後、自動ログアウトしてログイン画面に戻る
+    try {
+      await signOut(auth)
+      alert('会員登録が完了しました！\nログインしてください。')
+
+      // ログインモードに切り替え
+      isSignUp.value = false
+      // 会員登録フォームをクリア
+      passwordConfirm.value = ''
+      displayName.value = ''
+      profileImageFile.value = null
+      profileImagePreview.value = ''
+    } catch (signOutError) {
+      console.error('ログアウトエラー:', signOutError)
+      // ログアウト失敗してもダッシュボードには行かない
+      alert('会員登録が完了しました！\nもう一度ログインしてください。')
+      isSignUp.value = false
+      passwordConfirm.value = ''
+      displayName.value = ''
+      profileImageFile.value = null
+      profileImagePreview.value = ''
+    }
   } catch (error: unknown) {
     const authError = error as AuthError
     console.error('会員登録エラー:', authError)

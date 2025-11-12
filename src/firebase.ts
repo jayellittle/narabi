@@ -35,8 +35,13 @@ if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
   // Functions Emulator
   connectFunctionsEmulator(functions, '127.0.0.1', 5001)
 
-  // Storage Emulator
-  connectStorageEmulator(storage, '127.0.0.1', 9199)
+  // Storage Emulator (실행 중이지 않으면 연결하지 않음)
+  try {
+    connectStorageEmulator(storage, '127.0.0.1', 9199)
+    console.log('✅ Storage Emulator 연결 성공')
+  } catch (error) {
+    console.warn('⚠️ Storage Emulator 연결 실패 - 프로덕션 Storage 사용')
+  }
 }
 
 export default app
