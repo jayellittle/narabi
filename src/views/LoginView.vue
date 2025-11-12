@@ -169,17 +169,25 @@ const handleSignUp = async () => {
       profileImageUrl = await uploadProfileImage(user.uid)
     }
 
-    // Firebase Authのプロフィール更新
-    await updateProfile(user, {
-      displayName: displayName.value || null,
-      photoURL: profileImageUrl,
-    })
+    // Firebase Authのプロフィール更新（displayNameまたはphotoURLがある場合のみ）
+    const profileUpdate: { displayName?: string; photoURL?: string } = {}
+    if (displayName.value && displayName.value.trim()) {
+      profileUpdate.displayName = displayName.value.trim()
+    }
+    if (profileImageUrl) {
+      profileUpdate.photoURL = profileImageUrl
+    }
+
+    // プロフィール情報がある場合のみ更新
+    if (Object.keys(profileUpdate).length > 0) {
+      await updateProfile(user, profileUpdate)
+    }
 
     // Firestoreにユーザー情報を保存
     await setDoc(doc(db, 'users', user.uid), {
       uid: user.uid,
       email: user.email,
-      displayName: displayName.value || null,
+      displayName: displayName.value?.trim() || null,
       profileImageUrl: profileImageUrl,
       createdAt: serverTimestamp(),
     })
@@ -195,6 +203,18 @@ const handleSignUp = async () => {
     const authError = error as AuthError
     console.error('会員登録エラー:', authError)
     errorMessage.value = getErrorMessage(authError.code)
+
+    // メールアドレスが既に使用されている場合、ログインモードに切り替え
+    if (authError.code === 'auth/email-already-in-use') {
+      setTimeout(() => {
+        isSignUp.value = false
+        // パスワード確認とプロフィール情報をクリア
+        passwordConfirm.value = ''
+        displayName.value = ''
+        profileImageFile.value = null
+        profileImagePreview.value = ''
+      }, 2000)
+    }
   } finally {
     isSubmitting.value = false
   }
@@ -222,6 +242,16 @@ const handleSignIn = async () => {
   }
 }
 
+// フォームリセット
+const resetSignUpForm = () => {
+  email.value = ''
+  password.value = ''
+  passwordConfirm.value = ''
+  displayName.value = ''
+  profileImageFile.value = null
+  profileImagePreview.value = ''
+}
+
 const getErrorMessage = (errorCode: string): string => {
   switch (errorCode) {
     case 'auth/invalid-email':
@@ -233,7 +263,8 @@ const getErrorMessage = (errorCode: string): string => {
     case 'auth/wrong-password':
       return 'パスワードが間違っています。'
     case 'auth/email-already-in-use':
-      return 'このメールアドレスは既に登録されています。'
+      // この場合、アカウントは作成されているのでログインを試す
+      return 'このメールアドレスは既に登録されています。ログインしてください。'
     case 'auth/weak-password':
       return 'パスワードは6文字以上で設定してください。'
     case 'auth/invalid-credential':
