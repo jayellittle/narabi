@@ -1037,6 +1037,16 @@ watch(() => route.path, (newPath, oldPath) => {
     font-size: 1.1rem;
   }
 
+  .profile-header {
+    justify-content: center;
+  }
+
+  .logout-btn {
+    position: absolute;
+    right: 1rem;
+    top: 1rem;
+  }
+
   .profile-card {
     flex-direction: row;
     align-items: center;
