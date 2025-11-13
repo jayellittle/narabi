@@ -147,7 +147,7 @@
             <input
               v-model="editableProfile.displayName"
               type="text"
-              placeholder="表示名を入力（空欄の場合はメールアドレスが表示されます）"
+              placeholder="表示名を入力"
             />
           </div>
 
@@ -1049,32 +1049,32 @@ watch(() => route.path, (newPath, oldPath) => {
   }
 
   .profile-card {
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;
     gap: 1rem;
-    padding: 1.5rem;
-    width: 100%;
-    max-width: 400px;
+    padding: 1rem;
+    width: auto;
+    max-width: 90%;
   }
 
   .profile-image-container {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
     margin-bottom: 0;
     flex-shrink: 0;
   }
 
   .profile-info {
-    text-align: center;
-    width: 100%;
+    text-align: left;
+    flex: 1;
   }
 
   .profile-info h3 {
-    font-size: 1.1rem;
+    font-size: 1rem;
   }
 
   .profile-email {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
   }
 
   .stores-content {
