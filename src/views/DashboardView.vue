@@ -1036,9 +1036,16 @@ watch(() => route.path, (newPath, oldPath) => {
     align-items: center;
   }
 
-  /* 모바일에서 프로필 헤더 숨기기 */
-  .profile-header {
+  /* 모바일에서 프로필 헤더의 타이틀만 숨기기 */
+  .profile-header h2 {
     display: none;
+  }
+
+  .profile-header {
+    padding: 0;
+    border-bottom: none;
+    justify-content: flex-end;
+    margin-bottom: 0;
   }
 
   /* 로그아웃 버튼을 sidebar 기준으로 위치 */
@@ -1046,6 +1053,7 @@ watch(() => route.path, (newPath, oldPath) => {
     position: absolute;
     right: 1rem;
     top: 1rem;
+    z-index: 10;
   }
 
   .profile-card {
@@ -1053,8 +1061,8 @@ watch(() => route.path, (newPath, oldPath) => {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    width: auto;
-    max-width: 90%;
+    width: calc(100% - 2rem);
+    max-width: none;
   }
 
   .profile-image-container {
