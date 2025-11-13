@@ -24,8 +24,8 @@
             </div>
           </div>
           <div class="profile-info">
-            <h3>{{ userProfile?.displayName || 'ユーザー' }}</h3>
-            <p class="profile-email">{{ userProfile?.email || '' }}</p>
+            <h3>{{ userProfile?.displayName || userProfile?.email || 'ユーザー' }}</h3>
+            <p v-if="userProfile?.displayName" class="profile-email">{{ userProfile?.email || '' }}</p>
             <p class="edit-hint">クリックして編集</p>
           </div>
         </div>
@@ -143,12 +143,11 @@
           </div>
 
           <div class="form-group">
-            <label>表示名</label>
+            <label>表示名（任意）</label>
             <input
               v-model="editableProfile.displayName"
               type="text"
-              placeholder="表示名を入力"
-              required
+              placeholder="表示名を入力（空欄の場合はメールアドレスが表示されます）"
             />
           </div>
 
@@ -1026,21 +1025,23 @@ watch(() => route.path, (newPath, oldPath) => {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
   }
 
   .profile-section {
     width: 100%;
     max-width: 600px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  .profile-header h2 {
-    font-size: 1.1rem;
-  }
-
+  /* 모바일에서 프로필 헤더 숨기기 */
   .profile-header {
-    justify-content: center;
+    display: none;
   }
 
+  /* 로그아웃 버튼을 sidebar 기준으로 위치 */
   .logout-btn {
     position: absolute;
     right: 1rem;
@@ -1048,29 +1049,32 @@ watch(() => route.path, (newPath, oldPath) => {
   }
 
   .profile-card {
-    flex-direction: row;
+    flex-direction: column;
     align-items: center;
     gap: 1rem;
-    padding: 1rem;
+    padding: 1.5rem;
+    width: 100%;
+    max-width: 400px;
   }
 
   .profile-image-container {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     margin-bottom: 0;
     flex-shrink: 0;
   }
 
   .profile-info {
-    text-align: left;
+    text-align: center;
+    width: 100%;
   }
 
   .profile-info h3 {
-    font-size: 1rem;
+    font-size: 1.1rem;
   }
 
   .profile-email {
-    font-size: 0.8rem;
+    font-size: 0.85rem;
   }
 
   .stores-content {
