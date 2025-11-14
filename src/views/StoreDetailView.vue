@@ -8,15 +8,6 @@
       </div>
 
       <div v-if="store" class="store-info-section">
-        <!-- 점포 정보 -->
-        <div class="store-card">
-          <div class="store-icon">🏪</div>
-          <div class="store-details">
-            <h3 class="store-name">{{ store.name }}</h3>
-            <p class="store-address">{{ store.address }}</p>
-          </div>
-        </div>
-
         <!-- 관리 메뉴 -->
         <nav class="nav-menu">
           <h3>管理メニュー</h3>
@@ -59,15 +50,37 @@
     <main class="main-content">
       <!-- 모바일 헤더 -->
       <div v-if="store" class="mobile-header">
-        <button v-if="isMenuPage" @click="goBack" class="mobile-back-btn">
-          <span class="back-arrow">←</span>
-          <span class="back-text">戻る</span>
-        </button>
-        <button v-else @click="goToMenu" class="mobile-back-btn">
-          <span class="back-arrow">←</span>
-          <span class="back-text">メニュー</span>
-        </button>
+        <div class="mobile-header-top">
+          <button @click="isMenuPage ? goBack() : goToMenu()" class="mobile-back-btn-icon">
+            ←
+          </button>
+          <div class="mobile-user-info">
+            <img
+              :src="currentStaffMember?.staffImageUrl || currentUser?.photoURL || '/default-avatar.png'"
+              alt="プロフィール画像"
+              class="mobile-user-avatar"
+            />
+            <span class="mobile-user-name">{{ currentStaffMember?.displayName || currentUser?.email }}</span>
+          </div>
+        </div>
         <div class="mobile-store-name">{{ store.name }}</div>
+      </div>
+
+      <!-- PC 헤더 (store info card) - 메뉴 페이지에서만 표시 -->
+      <div v-if="store && isMenuPage" class="pc-store-header">
+        <div class="store-header-card">
+          <img
+            v-if="store.imageUrl"
+            :src="store.imageUrl"
+            alt="店舗画像"
+            class="store-header-image"
+          />
+          <div class="store-icon" v-else>🏪</div>
+          <div class="store-header-details">
+            <h3 class="store-header-name">{{ store.name }}</h3>
+            <p class="store-header-address">{{ store.address }}</p>
+          </div>
+        </div>
       </div>
 
       <router-view v-if="store" />
@@ -111,18 +124,25 @@ const storeId = route.params.storeId as string
 
 const store = ref<Store | null>(null)
 
+// 現在のユーザー
+const currentUser = computed(() => auth.currentUser)
+
 // 現在のページがメニューページかどうか
 const isMenuPage = computed(() => {
   return route.name === 'StoreManagementMenu'
 })
 
+// 現在のスタッフメンバー情報
+const currentStaffMember = computed(() => {
+  if (!store.value || !currentUser.value) return null
+  return store.value.staffList?.find(
+    (s) => s.email === currentUser.value?.email
+  )
+})
+
 // 現在のユーザーがpending状態かどうか
 const isCurrentUserPending = computed(() => {
-  if (!store.value || !auth.currentUser) return false
-  const myStaffEntry = store.value.staffList?.find(
-    (s) => s.email === auth.currentUser?.email
-  )
-  return myStaffEntry?.status === 'pending'
+  return currentStaffMember.value?.status === 'pending'
 })
 
 onMounted(async () => {
@@ -241,8 +261,13 @@ const goToMenu = () => {
   flex-direction: column;
 }
 
-.store-card {
-  margin: 1.5rem;
+/* PC 헤더 (store info card) */
+.pc-store-header {
+  display: none;
+}
+
+.store-header-card {
+  margin-bottom: 1.5rem;
   padding: 1.5rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 12px;
@@ -250,41 +275,52 @@ const goToMenu = () => {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
+}
+
+.store-header-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
 }
 
 .store-icon {
-  font-size: 2.5rem;
+  font-size: 3rem;
   background: rgba(255, 255, 255, 0.2);
-  width: 60px;
-  height: 60px;
+  width: 80px;
+  height: 80px;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 12px;
+  flex-shrink: 0;
 }
 
-.store-details {
+.store-header-details {
   flex: 1;
   min-width: 0;
 }
 
-.store-name {
+.store-header-name {
   margin: 0 0 0.5rem 0;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-.store-address {
+.store-header-address {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 1rem;
   opacity: 0.9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+/* Desktop에서 PC 헤더 표시 */
+@media (min-width: 769px) {
+  .pc-store-header {
+    display: block;
+  }
 }
 
 /* 네비게이션 메뉴 */
@@ -357,52 +393,78 @@ const goToMenu = () => {
   z-index: 100;
   background: white;
   border-bottom: 1px solid #e0e0e0;
-  padding: 1rem;
-  align-items: center;
-  gap: 1rem;
+  padding: 0.75rem 1rem;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
-.mobile-back-btn {
+.mobile-header-top {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 0.75rem;
+}
+
+.mobile-back-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
   background: #f5f5f5;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: background-color 0.3s;
-  font-size: 1rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #333;
+  flex-shrink: 0;
 }
 
-.mobile-back-btn:hover {
+.mobile-back-btn-icon:hover {
   background: #e0e0e0;
 }
 
-.mobile-back-btn:active {
+.mobile-back-btn-icon:active {
   background: #d0d0d0;
 }
 
-.back-arrow {
-  font-size: 1.2rem;
-  font-weight: bold;
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.back-text {
+.mobile-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #e0e0e0;
+}
+
+.mobile-user-name {
   font-weight: 500;
   color: #333;
-}
-
-.mobile-store-name {
-  flex: 1;
-  font-weight: 600;
-  color: #333;
-  font-size: 1.1rem;
-  text-align: center;
+  font-size: 0.95rem;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: 1rem;
+}
+
+.mobile-store-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-left: 0.25rem;
 }
 
 /* 反応形 */
@@ -424,21 +486,6 @@ const goToMenu = () => {
   /* モバイルヘッダーを表示 */
   .mobile-header {
     display: flex;
-  }
-
-  .store-card {
-    margin: 1rem;
-    padding: 1rem;
-  }
-
-  .store-icon {
-    font-size: 2rem;
-    width: 50px;
-    height: 50px;
-  }
-
-  .store-name {
-    font-size: 1.1rem;
   }
 }
 </style>

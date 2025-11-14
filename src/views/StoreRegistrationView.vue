@@ -958,4 +958,93 @@ h1 {
   background-color: #ccc;
   cursor: not-allowed;
 }
+
+/* モバイル対応 */
+@media (max-width: 768px) {
+  .store-registration-container {
+    padding: 1.5rem 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* タブボタンのサイズ調整 */
+  .tabs {
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .tabs button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  /* フォーム間隔調整 */
+  .store-form {
+    gap: 1rem;
+  }
+
+  .form-group {
+    margin-bottom: 0;
+  }
+
+  .existing-store-section,
+  .new-store-section {
+    margin-top: 1rem;
+  }
+
+  .search-box {
+    margin-bottom: 1rem;
+  }
+
+  .store-list {
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .store-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+    gap: 1rem;
+  }
+
+  .join-button {
+    width: 100%;
+    padding: 0.75rem;
+  }
+
+  .submit-button {
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  .back-link {
+    margin-top: 1.5rem;
+  }
+
+  .modal-content {
+    padding: 1.5rem;
+  }
+
+  .request-form {
+    gap: 1rem;
+  }
+}
+
+/* 小さいモバイル画面 */
+@media (max-width: 480px) {
+  .tabs button {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 0.95rem;
+  }
+}
 </style>

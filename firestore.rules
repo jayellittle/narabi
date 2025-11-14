@@ -33,8 +33,17 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                        request.resource.data.ownerId == request.auth.uid;
 
-      // 업데이트: 오너 또는 스태프
-      allow update: if isStoreOwner(storeId);
+      // 업데이트: 오너 또는 스태프가 자신을 제거하는 경우
+      allow update: if isStoreOwner(storeId) ||
+                       (isAuthenticated() &&
+                        // staffList 업데이트이고
+                        'staffList' in request.resource.data &&
+                        // 기존 staffList에서 자신의 항목만 제거하는 경우
+                        request.resource.data.staffList.size() == resource.data.staffList.size() - 1 &&
+                        // 자신의 이메일이 제거된 staffList에 없는지 확인
+                        !(request.auth.token.email in request.resource.data.staffList.map(s => s.email)) &&
+                        // 자신의 이메일이 기존 staffList에 있었는지 확인
+                        (request.auth.token.email in resource.data.staffList.map(s => s.email)));
 
       // 삭제: 오너만
       allow delete: if isStoreOwner(storeId);

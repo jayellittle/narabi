@@ -14,12 +14,14 @@ import {
   arrayUnion,
   getDoc,
 } from 'firebase/firestore'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
 import type { Store, StaffMember } from '../types'
 
 const route = useRoute()
 const router = useRouter()
 const auth = getAuth()
 const db = getFirestore()
+const storage = getStorage()
 const { getStore, inviteStaff, respondToInvitation, updateStaffDisplayName } = useFirebase()
 const { formatTimestamp } = useTimeFormat()
 
@@ -54,6 +56,8 @@ const showDisplayNameModal = ref(false)
 const displayNameForm = ref({
   displayName: '',
 })
+const staffImageFile = ref<File | null>(null)
+const staffImagePreview = ref<string | null>(null)
 const isUpdatingDisplayName = ref(false)
 
 // 초대 승인 시 표시명 입력 모달
@@ -246,7 +250,16 @@ const handleInviteStaff = async () => {
           errorMessage = '店舗が見つかりませんでした。'
           break
         case 'already-exists':
-          errorMessage = 'このメールアドレスは既に招待されています。'
+          // 이미 초대된 사용자와 이미 소속된 스태프를 구분
+          const staffList = store.value?.staffList || []
+          const existingStaff = staffList.find(s => s.email === inviteForm.value.email)
+          if (existingStaff && existingStaff.status === 'active') {
+            errorMessage = 'このメールアドレスは既にこの店舗に所属しています。'
+          } else if (existingStaff && existingStaff.status === 'pending') {
+            errorMessage = '既に招待されたユーザーです。承認をお待ちください。'
+          } else {
+            errorMessage = '既に招待されたユーザーです。'
+          }
           break
         case 'invalid-argument':
           errorMessage = 'メールアドレスが無効です。'
@@ -390,12 +403,65 @@ const handleLeaveStore = async () => {
   }
 }
 
+// 이미지 선택
+const handleStaffImageSelect = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+
+  if (file) {
+    if (!file.type.startsWith('image/')) {
+      alert('画像ファイルを選択してください。')
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ファイルサイズは5MB以下にしてください。')
+      return
+    }
+
+    staffImageFile.value = file
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      staffImagePreview.value = e.target?.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+// 이미지 제거
+const removeStaffImage = () => {
+  staffImageFile.value = null
+  staffImagePreview.value = null
+}
+
+// 이미지 업로드 함수
+const uploadStaffImage = async (): Promise<string | null> => {
+  if (!staffImageFile.value) return null
+
+  try {
+    const user = auth.currentUser
+    if (!user) return null
+
+    const fileName = `staff/${storeId.value}/${user.uid}/${Date.now()}_${staffImageFile.value.name}`
+    const imageRef = storageRef(storage, fileName)
+    await uploadBytes(imageRef, staffImageFile.value)
+    const downloadURL = await getDownloadURL(imageRef)
+    return downloadURL
+  } catch (error) {
+    console.error('画像アップロード失敗:', error)
+    return null
+  }
+}
+
 // 표시명 편집 모달 열기
 const openDisplayNameModal = () => {
   const myStaffEntry = store.value?.staffList.find(
     (s) => s.email === currentUserEmail.value
   )
   displayNameForm.value.displayName = myStaffEntry?.displayName || ''
+  staffImagePreview.value = myStaffEntry?.staffImageUrl || null
+  staffImageFile.value = null
   showDisplayNameModal.value = true
 }
 
@@ -404,13 +470,43 @@ const handleUpdateDisplayName = async () => {
   isUpdatingDisplayName.value = true
 
   try {
-    // 空の場合は表示名を削除
-    const displayNameValue = displayNameForm.value.displayName.trim() || ''
-    await updateStaffDisplayName(storeId.value, displayNameValue)
+    // 画像アップロード
+    let staffImageUrl: string | null = null
+    if (staffImageFile.value) {
+      staffImageUrl = await uploadStaffImage()
+    }
 
-    alert('表示名を更新しました。')
-    showDisplayNameModal.value = false
-    await loadStore()
+    // staffList 업데이트
+    const storeRef = doc(db, 'stores', storeId.value)
+    const storeDoc = await getDoc(storeRef)
+
+    if (storeDoc.exists()) {
+      const staffList = storeDoc.data().staffList || []
+      const updatedStaffList = staffList.map((staff: any) => {
+        if (staff.email === currentUserEmail.value) {
+          const updates: any = {
+            ...staff,
+            displayName: displayNameForm.value.displayName.trim() || null,
+          }
+          // 새 이미지가 업로드된 경우에만 staffImageUrl 업데이트
+          if (staffImageUrl) {
+            updates.staffImageUrl = staffImageUrl
+          }
+          return updates
+        }
+        return staff
+      })
+
+      await updateDoc(storeRef, {
+        staffList: updatedStaffList,
+      })
+
+      alert('表示名とプロフィール画像を更新しました。')
+      showDisplayNameModal.value = false
+      staffImageFile.value = null
+      staffImagePreview.value = null
+      await loadStore()
+    }
   } catch (err: any) {
     console.error('표시명 업데이트 실패:', err)
     alert(err.message || '表示名の更新に失敗しました。')
@@ -573,8 +669,15 @@ onMounted(() => {
             :class="{ 'is-current-user': staff.email === currentUserEmail }"
           >
             <div class="staff-info">
-              <div class="staff-icon">
-                {{ staff.role === 'owner' ? '👑' : '👤' }}
+              <div class="staff-avatar-container">
+                <img
+                  :src="staff.staffImageUrl || currentUser?.photoURL || '/default-avatar.png'"
+                  :alt="staff.displayName || staff.email"
+                  class="staff-avatar"
+                />
+                <div class="staff-role-badge">
+                  {{ staff.role === 'owner' ? '👑' : '⚙️' }}
+                </div>
               </div>
               <div class="staff-details">
                 <div class="staff-name">
@@ -660,7 +763,7 @@ onMounted(() => {
     <!-- 表示名編集モダル -->
     <div v-if="showDisplayNameModal" class="modal-overlay" @click="cancelDisplayName">
       <div class="modal-content" @click.stop>
-        <h2>表示名編集</h2>
+        <h2>表示名・プロフィール画像編集</h2>
 
         <form @submit.prevent="handleUpdateDisplayName" class="display-name-form">
           <div class="form-group">
@@ -673,6 +776,30 @@ onMounted(() => {
             />
             <p class="form-hint">
               他のスタッフに表示される名前です。空にするとメールアドレスが表示されます。
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label>プロフィール画像（任意）</label>
+            <div class="image-upload-section">
+              <div v-if="staffImagePreview" class="image-preview-container">
+                <img :src="staffImagePreview" alt="プレビュー" class="image-preview" />
+                <button type="button" @click="removeStaffImage" class="remove-image-btn">✕</button>
+              </div>
+              <label class="image-upload-label">
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleStaffImageSelect"
+                  class="image-upload-input"
+                />
+                <span class="upload-button-text">
+                  {{ staffImagePreview ? '画像を変更' : '画像を選択' }}
+                </span>
+              </label>
+            </div>
+            <p class="form-hint">
+              スタッフリストに表示される画像です。未設定の場合は共通プロフィール画像が表示されます。
             </p>
           </div>
 
@@ -867,6 +994,38 @@ h1 {
   align-items: center;
   gap: 1rem;
   flex: 1;
+}
+
+.staff-avatar-container {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  min-height: 50px;
+  flex-shrink: 0;
+}
+
+.staff-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e0e0e0;
+}
+
+.staff-role-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 20px;
+  height: 20px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  border: 2px solid #e0e0e0;
 }
 
 .staff-icon {
@@ -1082,6 +1241,76 @@ h1 {
   font-size: 0.85rem;
   color: #666;
   line-height: 1.5;
+}
+
+/* 画像アップロード */
+.image-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.image-preview-container {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid #e0e0e0;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #f44336;
+  color: white;
+  border: 2px solid white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background-color 0.3s;
+}
+
+.remove-image-btn:hover {
+  background-color: #da190b;
+}
+
+.image-upload-label {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.image-upload-input {
+  display: none;
+}
+
+.upload-button-text {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  background-color: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.upload-button-text:hover {
+  background-color: #e0e0e0;
+  border-color: #ccc;
 }
 
 .modal-actions {
