@@ -1042,17 +1042,17 @@ watch(() => route.path, (newPath, oldPath) => {
   }
 
   .profile-header {
-    padding: 0;
-    border-bottom: none;
-    justify-content: flex-end;
-    margin-bottom: 0;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 1rem;
+    border: none;
+    margin: 0;
   }
 
-  /* 로그아웃 버튼을 sidebar 기준으로 위치 */
+  /* 로그아웃 버튼 */
   .logout-btn {
-    position: absolute;
-    right: 1rem;
-    top: 1rem;
+    position: static;
     z-index: 10;
   }
 
@@ -1061,8 +1061,9 @@ watch(() => route.path, (newPath, oldPath) => {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    width: calc(100% - 2rem);
-    max-width: none;
+    width: 100%;
+    max-width: calc(100% - 2rem);
+    margin: 0 auto;
   }
 
   .profile-image-container {
