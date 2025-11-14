@@ -836,3 +836,80 @@ export const getEstimatedWaitTime = functions.https.onCall(async (data) => {
     throw new functions.https.HttpsError('internal', '待ち時間の推定に失敗しました。')
   }
 })
+
+// ========================================
+// スタッフの自己削除
+// ========================================
+export const removeStaffSelf = functions.https.onCall(async (data, context) => {
+  // 認証チェック
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+  }
+
+  const { storeId } = data
+  const userEmail = context.auth.token.email
+
+  if (!storeId) {
+    throw new functions.https.HttpsError('invalid-argument', '店舗IDが必要です。')
+  }
+
+  if (!userEmail) {
+    throw new functions.https.HttpsError('invalid-argument', 'メールアドレスが取得できません。')
+  }
+
+  try {
+    const storeRef = db.collection('stores').doc(storeId)
+    const storeDoc = await storeRef.get()
+
+    if (!storeDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+    }
+
+    const storeData = storeDoc.data() as StoreInfo
+    const staffList = storeData.staffList || []
+
+    // 自分のスタッフエントリを探す
+    const myStaffEntry = staffList.find((s) => s.email === userEmail)
+
+    if (!myStaffEntry) {
+      throw new functions.https.HttpsError('not-found', 'スタッフリストに登録されていません。')
+    }
+
+    // オーナーの場合、他にオーナーがいるか確認
+    if (myStaffEntry.role === 'owner') {
+      const otherOwners = staffList.filter(
+        (s) => s.role === 'owner' && s.status === 'active' && s.email !== userEmail
+      )
+
+      if (otherOwners.length === 0) {
+        throw new functions.https.HttpsError(
+          'failed-precondition',
+          '他のオーナーがいないため、退店できません。'
+        )
+      }
+    }
+
+    // 自分のエントリを削除
+    const updatedStaffList = staffList.filter((s) => s.email !== userEmail)
+
+    await storeRef.update({
+      staffList: updatedStaffList,
+    })
+
+    logger.info(`スタッフ削除成功: ${userEmail} from store ${storeId}`)
+
+    return {
+      success: true,
+      message: '退店しました。',
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('スタッフ削除失敗:', errorMessage)
+
+    if (error instanceof functions.https.HttpsError) {
+      throw error
+    }
+
+    throw new functions.https.HttpsError('internal', 'スタッフの削除に失敗しました。')
+  }
+})

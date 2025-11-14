@@ -15,6 +15,7 @@ import {
   getDoc,
 } from 'firebase/firestore'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { getFunctions, httpsCallable } from 'firebase/functions'
 import type { Store, StaffMember } from '../types'
 
 const route = useRoute()
@@ -22,6 +23,7 @@ const router = useRouter()
 const auth = getAuth()
 const db = getFirestore()
 const storage = getStorage()
+const functions = getFunctions()
 const { getStore, inviteStaff, respondToInvitation, updateStaffDisplayName } = useFirebase()
 const { formatTimestamp } = useTimeFormat()
 
@@ -383,20 +385,12 @@ const handleLeaveStore = async () => {
   }
 
   try {
-    const storeRef = doc(db, 'stores', storeId.value)
-    const storeDoc = await getDoc(storeRef)
+    // Firebase Functionsを使用してスタッフを削除
+    const removeStaffSelf = httpsCallable(functions, 'removeStaffSelf')
+    await removeStaffSelf({ storeId: storeId.value })
 
-    if (storeDoc.exists()) {
-      const staffList = storeDoc.data().staffList || []
-      const updatedStaffList = staffList.filter((staff: any) => staff.email !== currentUserEmail.value)
-
-      await updateDoc(storeRef, {
-        staffList: updatedStaffList,
-      })
-
-      alert('退店しました。')
-      router.push('/dashboard')
-    }
+    alert('退店しました。')
+    router.push('/dashboard')
   } catch (err: any) {
     console.error('탈퇴 실패:', err)
     alert(err.message || '退店に失敗しました。')
