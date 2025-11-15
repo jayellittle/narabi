@@ -36,7 +36,13 @@
     <main class="stores-content">
       <div class="stores-header">
         <h1>🏪 店舗一覧</h1>
-        <button @click="goToRegisterStore" class="add-store-header-btn">+ 店舗を追加</button>
+        <button
+          v-if="approvedStores.length > 0 || pendingStores.length > 0 || invitationPendingStores.length > 0"
+          @click="goToRegisterStore"
+          class="add-store-header-btn"
+        >
+          + 店舗を追加
+        </button>
       </div>
 
       <div v-if="isLoading" class="loading">読み込み中...</div>
@@ -1029,9 +1035,12 @@ watch(() => route.path, (newPath, oldPath) => {
   .profile-section {
     width: 100%;
     padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
-  /* 모바일에서 프로필 헤더 - 로그아웃 버튼만 */
+  /* 모バイルに서 프로필 헤더 - 로그아웃 버튼만 */
   .profile-header {
     position: absolute;
     top: 0.5rem;
@@ -1049,6 +1058,8 @@ watch(() => route.path, (newPath, oldPath) => {
   /* 로그아웃 버튼 */
   .logout-btn {
     position: static;
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
   }
 
   .profile-card {
@@ -1056,9 +1067,9 @@ watch(() => route.path, (newPath, oldPath) => {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    width: auto;
-    margin: 0 auto;
-    max-width: none;
+    width: 100%;
+    max-width: 400px;
+    margin: 0;
   }
 
   .profile-image-container {

@@ -247,9 +247,9 @@ h1 {
   font-size: 0.9rem;
   line-height: 1.6;
   margin: 1rem 0 0 0;
-  word-wrap: break-word;
-  word-break: keep-all;
+  word-break: normal;
   overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* 대기 정보 */
@@ -358,13 +358,16 @@ h1 {
     margin-right: auto;
     box-sizing: border-box;
     max-width: 100%;
-    width: fit-content;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 
   .qr-image-wrapper canvas {
-    width: 180px !important;
-    height: 180px !important;
-    max-width: 100%;
+    width: 220px !important;
+    height: 220px !important;
+    max-width: calc(100vw - 3rem) !important;
+    max-height: calc(100vw - 3rem) !important;
   }
 
   .info-card {

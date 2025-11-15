@@ -1355,19 +1355,30 @@ h1 {
 
   .header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
     margin-bottom: 1.5rem;
   }
 
   h1 {
     font-size: 1.5rem;
+    text-align: center;
+    width: 100%;
   }
 
-  .invite-button {
+  .header-buttons {
     width: 100%;
-    padding: 1rem;
-    font-size: 1rem;
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem;
+  }
+
+  .display-name-button,
+  .invite-button {
+    flex: 1;
+    padding: 0.75rem 0.5rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
   }
 
   .staff-section {

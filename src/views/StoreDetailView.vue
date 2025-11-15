@@ -56,11 +56,11 @@
           </button>
           <div class="mobile-user-info">
             <img
-              :src="currentStaffMember?.staffImageUrl || currentUser?.photoURL || '/default-avatar.png'"
+              :src="currentProfileImage"
               alt="プロフィール画像"
               class="mobile-user-avatar"
             />
-            <span class="mobile-user-name">{{ currentStaffMember?.displayName || currentUser?.email }}</span>
+            <span class="mobile-user-name">{{ currentDisplayName }}</span>
           </div>
         </div>
         <div class="mobile-store-name">{{ store.name }}</div>
@@ -103,6 +103,8 @@ interface StaffMember {
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
   invitedAt: any
+  staffImageUrl?: string
+  displayName?: string
 }
 
 interface Store {
@@ -111,9 +113,16 @@ interface Store {
   address: string
   phoneNumber: string
   googleMapsUrl?: string
+  imageUrl?: string
   ownerId: string
   staffList?: StaffMember[]
   createdAt: any
+}
+
+interface UserProfile {
+  email: string
+  displayName: string
+  profileImageUrl: string
 }
 
 const db = getFirestore()
@@ -123,6 +132,7 @@ const router = useRouter()
 const storeId = route.params.storeId as string
 
 const store = ref<Store | null>(null)
+const userProfile = ref<UserProfile | null>(null)
 
 // 現在のユーザー
 const currentUser = computed(() => auth.currentUser)
@@ -140,10 +150,46 @@ const currentStaffMember = computed(() => {
   )
 })
 
+// プロフィール画像を取得 (優先順位: スタッフ画像 > ユーザー画像)
+const currentProfileImage = computed(() => {
+  if (currentStaffMember.value?.staffImageUrl) {
+    return currentStaffMember.value.staffImageUrl
+  }
+  if (userProfile.value?.profileImageUrl) {
+    return userProfile.value.profileImageUrl
+  }
+  return '/default-avatar.png'
+})
+
+// 表示名を取得 (優先順位: スタッフ表示名 > ユーザー表示名 > メール)
+const currentDisplayName = computed(() => {
+  if (currentStaffMember.value?.displayName) {
+    return currentStaffMember.value.displayName
+  }
+  if (userProfile.value?.displayName) {
+    return userProfile.value.displayName
+  }
+  return currentUser.value?.email || ''
+})
+
 // 現在のユーザーがpending状態かどうか
 const isCurrentUserPending = computed(() => {
   return currentStaffMember.value?.status === 'pending'
 })
+
+// ユーザープロフィールをロード
+const loadUserProfile = async () => {
+  if (!currentUser.value) return
+
+  try {
+    const userDoc = await getDoc(doc(db, 'users', currentUser.value.uid))
+    if (userDoc.exists()) {
+      userProfile.value = userDoc.data() as UserProfile
+    }
+  } catch (error) {
+    console.error('ユーザープロフィール読み込み失敗:', error)
+  }
+}
 
 onMounted(async () => {
   if (storeId) {
@@ -156,6 +202,9 @@ onMounted(async () => {
           id: storeDoc.id,
           ...storeDoc.data(),
         } as Store
+
+        // ユーザープロフィールもロード
+        await loadUserProfile()
       } else {
         console.error('Store not found!')
         alert('店舗情報が見つかりませんでした。')
@@ -460,11 +509,10 @@ const goToMenu = () => {
   font-weight: 600;
   color: #333;
   font-size: 1rem;
-  text-align: left;
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-left: 0.25rem;
 }
 
 /* 反応形 */
