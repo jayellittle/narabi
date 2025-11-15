@@ -264,7 +264,7 @@ onUnmounted(() => {
   }
 
   .menu-card {
-    padding: 1.25rem 1rem;
+    padding: 0.75rem 1rem;
   }
 
   /* モバイルで説明文を非表示 */

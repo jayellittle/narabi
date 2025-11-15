@@ -36,13 +36,7 @@
     <main class="stores-content">
       <div class="stores-header">
         <h1>🏪 店舗一覧</h1>
-        <button
-          v-if="approvedStores.length > 0 || pendingStores.length > 0 || invitationPendingStores.length > 0"
-          @click="goToRegisterStore"
-          class="add-store-header-btn"
-        >
-          + 店舗を追加
-        </button>
+        <button @click="goToRegisterStore" class="add-store-header-btn">+ 店舗を追加</button>
       </div>
 
       <div v-if="isLoading" class="loading">読み込み中...</div>
@@ -52,7 +46,6 @@
         <div v-if="approvedStores.length === 0 && pendingStores.length === 0 && invitationPendingStores.length === 0" class="no-stores">
           <div class="no-stores-icon">🏪</div>
           <p>登録された店舗がありません。</p>
-          <button @click="goToRegisterStore" class="primary-btn">+ 店舗を登録</button>
         </div>
 
         <!-- 점포 목록 (관리메뉴 스타일) -->
@@ -1034,17 +1027,17 @@ watch(() => route.path, (newPath, oldPath) => {
 
   .profile-section {
     width: 100%;
-    padding: 1rem;
+    padding: 1rem 1rem 0.5rem 1rem;
     display: flex;
     flex-direction: column;
     align-items: center;
   }
 
-  /* 모バイルに서 프로필 헤더 - 로그아웃 버튼만 */
+  /* 모バ이ルに서 프로필 헤더 - 로그아웃 버튼만 */
   .profile-header {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
+    top: 0.75rem;
+    right: 1rem;
     padding: 0;
     border: none;
     margin: 0;
@@ -1058,8 +1051,8 @@ watch(() => route.path, (newPath, oldPath) => {
   /* 로그아웃 버튼 */
   .logout-btn {
     position: static;
-    padding: 0.4rem 0.8rem;
-    font-size: 0.8rem;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.75rem;
   }
 
   .profile-card {

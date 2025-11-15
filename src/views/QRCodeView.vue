@@ -364,10 +364,10 @@ h1 {
   }
 
   .qr-image-wrapper canvas {
-    width: 220px !important;
-    height: 220px !important;
-    max-width: calc(100vw - 3rem) !important;
-    max-height: calc(100vw - 3rem) !important;
+    width: 200px !important;
+    height: 200px !important;
+    max-width: calc(100vw - 4rem) !important;
+    max-height: calc(100vw - 4rem) !important;
   }
 
   .info-card {
@@ -392,9 +392,9 @@ h1 {
     font-size: 1.1rem;
   }
 
-  /* モバイルで「現在待機中のお客様はいません。」のテキストが綺麗に表示されるように */
+  /* モバイルで説明文を非表示 */
   .qr-instruction {
-    font-size: 0.85rem;
+    display: none;
   }
 }
 

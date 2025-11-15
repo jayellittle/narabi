@@ -427,6 +427,7 @@ const handleStaffImageSelect = (event: Event) => {
 const removeStaffImage = () => {
   staffImageFile.value = null
   staffImagePreview.value = null
+  staffImageToDelete.value = true
 }
 
 // 이미지 업로드 함수
@@ -456,6 +457,7 @@ const openDisplayNameModal = () => {
   displayNameForm.value.displayName = myStaffEntry?.displayName || ''
   staffImagePreview.value = myStaffEntry?.staffImageUrl || null
   staffImageFile.value = null
+  staffImageToDelete.value = false
   showDisplayNameModal.value = true
 }
 
@@ -482,8 +484,12 @@ const handleUpdateDisplayName = async () => {
             ...staff,
             displayName: displayNameForm.value.displayName.trim() || null,
           }
+          // 이미지 삭제
+          if (staffImageToDelete.value && !staffImageFile.value) {
+            updates.staffImageUrl = null
+          }
           // 새 이미지가 업로드된 경우에만 staffImageUrl 업데이트
-          if (staffImageUrl) {
+          else if (staffImageUrl) {
             updates.staffImageUrl = staffImageUrl
           }
           return updates

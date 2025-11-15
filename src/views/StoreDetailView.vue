@@ -442,7 +442,7 @@ const goToMenu = () => {
   z-index: 100;
   background: white;
   border-bottom: 1px solid #e0e0e0;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem;
   flex-direction: column;
   gap: 0.5rem;
 }
@@ -483,8 +483,8 @@ const goToMenu = () => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
-  min-width: 0;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .mobile-user-avatar {
