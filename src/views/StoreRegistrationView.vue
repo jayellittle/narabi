@@ -540,34 +540,37 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
 </template>
 
 <style scoped>
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 .store-registration-container {
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1.5rem 1rem;
+  box-sizing: border-box;
 }
 
 h1 {
-  font-size: 2rem;
-  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
   color: #333;
 }
 
 .tabs {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
   border-bottom: 2px solid #e0e0e0;
 }
 
 .tabs button {
-  padding: 1rem 2rem;
+  padding: 0.625rem 0.75rem;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.85rem;
   color: #666;
   transition: all 0.3s;
+  white-space: nowrap;
 }
 
 .tabs button.active {
@@ -586,11 +589,11 @@ h1 {
 
 /* 기존 매장 섹션 */
 .existing-store-section {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .search-box {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .search-input {
@@ -610,21 +613,22 @@ h1 {
 .store-list {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
 }
 
 .store-card {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1rem;
+  gap: 1rem;
   border: 1px solid #ddd;
   border-radius: 8px;
   transition: box-shadow 0.3s;
 }
 
-.store-card:hover {
+.store-card:active {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -646,7 +650,8 @@ h1 {
 }
 
 .join-button {
-  padding: 0.75rem 1.5rem;
+  width: 100%;
+  padding: 0.75rem;
   background-color: #4caf50;
   color: white;
   border: none;
@@ -656,8 +661,9 @@ h1 {
   transition: background-color 0.3s;
 }
 
-.join-button:hover:not(:disabled) {
+.join-button:active:not(:disabled) {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 .join-button:disabled {
@@ -673,13 +679,13 @@ h1 {
 
 /* 새 매장 섹션 */
 .new-store-section {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .store-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .form-group {
@@ -733,19 +739,20 @@ h1 {
 }
 
 .submit-button {
-  padding: 1rem 2rem;
+  padding: 0.875rem 1.5rem;
   background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: bold;
   transition: background-color 0.3s;
 }
 
-.submit-button:hover:not(:disabled) {
+.submit-button:active:not(:disabled) {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 .submit-button:disabled {
@@ -828,7 +835,7 @@ h1 {
 }
 
 .back-link {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
   text-align: center;
 }
 
@@ -859,7 +866,7 @@ h1 {
 .modal-content {
   background: white;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1.5rem;
   max-width: 500px;
   width: 90%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
@@ -880,7 +887,7 @@ h1 {
 .request-form {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .form-group {
@@ -959,92 +966,5 @@ h1 {
   cursor: not-allowed;
 }
 
-/* モバイル対応 */
-@media (max-width: 768px) {
-  .store-registration-container {
-    padding: 1.5rem 1rem;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  /* タブボタンのサイズ調整 */
-  .tabs {
-    gap: 0.5rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .tabs button {
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    white-space: nowrap;
-  }
-
-  /* フォーム間隔調整 */
-  .store-form {
-    gap: 1rem;
-  }
-
-  .form-group {
-    margin-bottom: 0;
-  }
-
-  .existing-store-section,
-  .new-store-section {
-    margin-top: 1rem;
-  }
-
-  .search-box {
-    margin-bottom: 1rem;
-  }
-
-  .store-list {
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-  }
-
-  .store-card {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 1rem;
-    gap: 1rem;
-  }
-
-  .join-button {
-    width: 100%;
-    padding: 0.75rem;
-  }
-
-  .submit-button {
-    padding: 0.875rem 1.5rem;
-    font-size: 1rem;
-  }
-
-  .back-link {
-    margin-top: 1.5rem;
-  }
-
-  .modal-content {
-    padding: 1.5rem;
-  }
-
-  .request-form {
-    gap: 1rem;
-  }
-}
-
-/* 小さいモバイル画面 */
-@media (max-width: 480px) {
-  .tabs button {
-    padding: 0.625rem 0.75rem;
-    font-size: 0.85rem;
-  }
-
-  .form-group input,
-  .form-group textarea {
-    font-size: 0.95rem;
-  }
-}
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 </style>

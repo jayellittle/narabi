@@ -362,11 +362,9 @@ const goToMenu = () => {
   opacity: 0.9;
 }
 
-/* Desktop에서 PC 헤더 표시 */
-@media (min-width: 769px) {
-  .pc-store-header {
-    display: block;
-  }
+/* PC 헤더を常に非表示 */
+.pc-store-header {
+  display: none;
 }
 
 /* 네비게이션 메뉴 */
@@ -512,25 +510,23 @@ const goToMenu = () => {
   text-overflow: ellipsis;
 }
 
-/* 反応形 */
-@media (max-width: 768px) {
-  .store-detail-container {
-    flex-direction: column;
-  }
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
+.store-detail-container {
+  flex-direction: column;
+}
 
-  /* モバイルでは常にサイドバーを非表示 */
-  .sidebar {
-    display: none;
-  }
+/* サイドバーを常に非表示 */
+.sidebar {
+  display: none;
+}
 
-  .main-content {
-    padding: 0;
-    width: 100%;
-  }
+.main-content {
+  padding: 0;
+  width: 100%;
+}
 
-  /* モバイルヘッダーを表示 */
-  .mobile-header {
-    display: flex;
-  }
+/* モバイルヘッダーを常に表示 */
+.mobile-header {
+  display: flex;
 }
 </style>

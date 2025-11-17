@@ -845,61 +845,74 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 .staff-management-container {
-  max-width: 900px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 /* 헤더 */
 .header {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 2rem;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: 1.3rem;
   color: #333;
   margin: 0;
+  text-align: center;
+  width: 100%;
 }
 
 .header-buttons {
+  width: 100%;
   display: flex;
-  gap: 0.75rem;
+  flex-direction: row;
+  gap: 0.5rem;
 }
 
 .display-name-button {
-  padding: 0.75rem 1.5rem;
+  flex: 1;
+  padding: 0.75rem 0.5rem;
   background-color: #2196f3;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 500;
   transition: background-color 0.3s;
+  white-space: nowrap;
 }
 
-.display-name-button:hover {
+.display-name-button:active {
   background-color: #1976d2;
+  transform: scale(0.98);
 }
 
 .invite-button {
-  padding: 0.75rem 1.5rem;
+  flex: 1;
+  padding: 0.75rem 0.5rem;
   background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 500;
   transition: background-color 0.3s;
+  white-space: nowrap;
 }
 
-.invite-button:hover {
+.invite-button:active {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 /* 로딩 및 에러 */
@@ -957,23 +970,24 @@ h1 {
 
 .staff-card {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
   background: #f8f9fa;
   border-radius: 8px;
   transition: background 0.3s;
   position: relative;
 }
 
-.staff-card:hover {
+.staff-card:active {
   background: #e9ecef;
 }
 
-/* PC에서도 현재 사용자 강조 */
+/* 현재 사용자 강조 */
 .staff-card.is-current-user {
   border: 3px solid #4caf50;
-  padding-bottom: 2.5rem;
+  padding-bottom: 1.5rem;
 }
 
 .staff-card.is-current-user::after {
@@ -992,16 +1006,16 @@ h1 {
 .staff-info {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex: 1;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .staff-avatar-container {
   position: relative;
-  width: 50px;
-  height: 50px;
-  min-width: 50px;
-  min-height: 50px;
+  width: 45px;
+  height: 45px;
+  min-width: 45px;
+  min-height: 45px;
   flex-shrink: 0;
 }
 
@@ -1017,23 +1031,23 @@ h1 {
   position: absolute;
   bottom: -2px;
   right: -2px;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background: white;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   border: 2px solid #e0e0e0;
 }
 
 .staff-icon {
-  font-size: 2rem;
-  width: 50px;
-  height: 50px;
-  min-width: 50px;
-  min-height: 50px;
+  font-size: 1.75rem;
+  width: 45px;
+  height: 45px;
+  min-width: 45px;
+  min-height: 45px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -1044,7 +1058,7 @@ h1 {
 
 .staff-details {
   flex: 1;
-  min-width: 0; /* テキストが親要素を超えないようにする */
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -1054,6 +1068,7 @@ h1 {
   margin-bottom: 0.25rem;
   word-break: break-word;
   overflow-wrap: break-word;
+  font-size: 0.9rem;
 }
 
 .staff-email {
@@ -1062,10 +1077,11 @@ h1 {
   margin-bottom: 0.25rem;
   word-break: break-all;
   overflow-wrap: break-word;
+  font-size: 0.9rem;
 }
 
 .staff-email-small {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #666;
   margin-bottom: 0.25rem;
   word-break: break-all;
@@ -1078,7 +1094,7 @@ h1 {
 }
 
 .staff-meta {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   color: #666;
 }
 
@@ -1086,7 +1102,7 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 0.25rem;
+  margin-top: 0.15rem;
 }
 
 .staff-actions-inline {
@@ -1130,16 +1146,19 @@ h1 {
 
 /* 스태프 액션 */
 .staff-actions {
+  width: 100%;
   display: flex;
+  flex-direction: row;
   gap: 0.5rem;
 }
 
 .action-btn {
-  padding: 0.5rem 1rem;
+  flex: 1;
+  padding: 0.75rem;
   border: none;
   border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 500;
   transition: all 0.3s;
 }
@@ -1149,8 +1168,9 @@ h1 {
   color: white;
 }
 
-.approve-btn:hover {
+.approve-btn:active {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 .reject-btn {
@@ -1158,8 +1178,9 @@ h1 {
   color: white;
 }
 
-.reject-btn:hover {
+.reject-btn:active {
   background-color: #da190b;
+  transform: scale(0.98);
 }
 
 /* 권한 안내 */
@@ -1188,15 +1209,16 @@ h1 {
 .modal-content {
   background: white;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1.5rem;
   max-width: 500px;
-  width: 90%;
+  width: 95%;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .modal-content h2 {
   margin: 0 0 1.5rem 0;
   color: #333;
+  font-size: 1.3rem;
 }
 
 .invite-form,
@@ -1224,7 +1246,7 @@ h1 {
 .form-group input,
 .form-group select {
   padding: 0.75rem;
-  font-size: 1rem;
+  font-size: 16px; /* iOS のズーム防止 */
   border: 1px solid #ddd;
   border-radius: 4px;
   font-family: inherit;
@@ -1315,12 +1337,14 @@ h1 {
 
 .modal-actions {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
   justify-content: flex-end;
 }
 
 .cancel-button,
 .submit-button {
+  width: 100%;
   padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 6px;
@@ -1353,168 +1377,5 @@ h1 {
   cursor: not-allowed;
 }
 
-/* モバイル対応 */
-@media (max-width: 768px) {
-  .staff-management-container {
-    padding: 1rem;
-  }
-
-  .header {
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    text-align: center;
-    width: 100%;
-  }
-
-  .header-buttons {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    gap: 0.5rem;
-  }
-
-  .display-name-button,
-  .invite-button {
-    flex: 1;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-
-  .staff-section {
-    padding: 1.25rem;
-  }
-
-  .staff-section h2 {
-    font-size: 1.2rem;
-  }
-
-  .staff-card {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.75rem;
-    padding: 1rem;
-    position: relative;
-  }
-
-  /* 모바일에서 현재 사용자 카드의 하단 패딩 조정 */
-  .staff-card.is-current-user {
-    padding-bottom: 1.75rem;
-  }
-
-  .staff-info {
-    width: 100%;
-    gap: 0.75rem;
-  }
-
-  .staff-icon {
-    width: 50px;
-    height: 50px;
-    min-width: 50px;
-    min-height: 50px;
-    font-size: 2rem;
-  }
-
-  .staff-email {
-    font-size: 0.95rem;
-  }
-
-  .staff-actions {
-    width: 100%;
-    flex-direction: row;
-    gap: 0.5rem;
-  }
-
-  .action-btn {
-    flex: 1;
-    padding: 0.75rem;
-    font-size: 1rem;
-  }
-
-  .staff-actions-row {
-    width: 100%;
-    justify-content: space-between;
-  }
-
-  .modal-content {
-    width: 95%;
-    padding: 1.5rem;
-  }
-
-  .modal-content h2 {
-    font-size: 1.3rem;
-  }
-
-  .form-group input,
-  .form-group select {
-    font-size: 16px; /* iOS のズーム防止 */
-  }
-
-  .modal-actions {
-    flex-direction: column;
-  }
-
-  .cancel-button,
-  .submit-button {
-    width: 100%;
-  }
-}
-
-/* 小さいモバイル画面 (iPhone SE等) */
-@media (max-width: 480px) {
-  h1 {
-    font-size: 1.3rem;
-  }
-
-  .staff-section {
-    padding: 1rem;
-  }
-
-  .staff-section h2 {
-    font-size: 1.1rem;
-  }
-
-  .staff-card {
-    padding: 0.75rem;
-    gap: 0.5rem;
-  }
-
-  .staff-card.is-current-user {
-    padding-bottom: 1.5rem;
-  }
-
-  .staff-info {
-    gap: 0.5rem;
-  }
-
-  .staff-icon {
-    width: 45px;
-    height: 45px;
-    min-width: 45px;
-    min-height: 45px;
-    font-size: 1.75rem;
-  }
-
-  .staff-email {
-    font-size: 0.9rem;
-  }
-
-  .staff-email-small {
-    font-size: 0.75rem;
-  }
-
-  .staff-meta {
-    font-size: 0.8rem;
-  }
-
-  .staff-meta-row {
-    margin-top: 0.15rem;
-  }
-}
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 </style>

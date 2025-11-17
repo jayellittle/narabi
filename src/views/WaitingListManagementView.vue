@@ -304,10 +304,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 .waiting-list-container {
-  max-width: 1200px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 0.5rem 2rem 2rem 2rem;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 /* 헤더 */
@@ -316,19 +318,19 @@ onMounted(() => {
 }
 
 h1 {
-  font-size: 2rem;
+  font-size: 1.3rem;
   margin-bottom: 1rem;
   color: #333;
 }
 
 .stats {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .stat-card {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1rem;
   border-radius: 12px;
   text-align: center;
   color: white;
@@ -347,13 +349,13 @@ h1 {
 }
 
 .stat-value {
-  font-size: 2.5rem;
+  font-size: 1.75rem;
   font-weight: bold;
   margin-bottom: 0.25rem;
 }
 
 .stat-label {
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   opacity: 0.9;
 }
 
@@ -370,16 +372,16 @@ h1 {
 
 .filters button {
   flex: 1;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 0.5rem;
   background: white;
   border: 1px solid #e0e0e0;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s;
-  font-size: 0.95rem;
+  font-size: 0.85rem;
 }
 
-.filters button:hover {
+.filters button:active {
   background: #f5f5f5;
 }
 
@@ -395,8 +397,8 @@ h1 {
 .error,
 .no-customers {
   text-align: center;
-  padding: 3rem;
-  font-size: 1.1rem;
+  padding: 2rem;
+  font-size: 1rem;
 }
 
 .error {
@@ -404,7 +406,7 @@ h1 {
 }
 
 .no-customers-icon {
-  font-size: 4rem;
+  font-size: 3rem;
   margin-bottom: 1rem;
 }
 
@@ -420,58 +422,75 @@ h1 {
 }
 
 .customer-card {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-  padding: 1.5rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 1rem;
+  padding: 1.25rem;
   background: white;
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   transition: box-shadow 0.3s;
 }
 
-.customer-card:hover {
+.customer-card:active {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 /* 순번 */
 .queue-number {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-width: 60px;
-  height: 60px;
+  min-width: 45px;
+  height: 45px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
   border-radius: 12px;
+  flex-shrink: 0;
 }
 
 .queue-number .number {
-  font-size: 1.8rem;
+  font-size: 1.3rem;
   font-weight: bold;
   line-height: 1;
 }
 
 .queue-number .label {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   opacity: 0.9;
+}
+
+/* 액션 버튼 (모바일) */
+.customer-actions.mobile-actions {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  align-self: center;
 }
 
 /* 고객 정보 */
 .customer-info {
+  grid-column: 1 / -1;
+  grid-row: 2;
   display: flex;
   align-items: center;
-  gap: 1rem;
-  flex: 1;
+  gap: 0.75rem;
+  width: 100%;
 }
 
 .customer-avatar {
-  width: 60px;
-  height: 60px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #e0e0e0;
+  flex-shrink: 0;
 }
 
 .customer-details {
@@ -489,7 +508,7 @@ h1 {
 
 .customer-name {
   margin: 0;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   color: #333;
 }
 
@@ -534,27 +553,18 @@ h1 {
   color: #1565c0;
 }
 
-/* 액션 버튼 */
-.customer-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-/* PC에서는 mobile-actions 숨기고 desktop-actions 표시 */
-.mobile-actions {
+/* desktop-actions 숨김 */
+.customer-actions.desktop-actions {
   display: none;
 }
 
-.desktop-actions {
-  display: flex;
-}
-
 .action-btn {
-  padding: 0.75rem 1.25rem;
+  flex: 1;
+  padding: 0.6rem 0.4rem;
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   transition: all 0.3s;
   white-space: nowrap;
@@ -570,8 +580,9 @@ h1 {
   color: white;
 }
 
-.call-btn:hover:not(:disabled) {
+.call-btn:active:not(:disabled) {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 .complete-btn {
@@ -579,8 +590,9 @@ h1 {
   color: white;
 }
 
-.complete-btn:hover:not(:disabled) {
+.complete-btn:active:not(:disabled) {
   background-color: #1976d2;
+  transform: scale(0.98);
 }
 
 .cancel-btn {
@@ -588,166 +600,10 @@ h1 {
   color: white;
 }
 
-.cancel-btn:hover:not(:disabled) {
+.cancel-btn:active:not(:disabled) {
   background-color: #da190b;
+  transform: scale(0.98);
 }
 
-/* 反応形 */
-@media (max-width: 768px) {
-  .waiting-list-container {
-    padding: 1rem;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-  }
-
-  .stats {
-    gap: 0.5rem;
-  }
-
-  .stat-card {
-    padding: 1rem;
-  }
-
-  .stat-value {
-    font-size: 1.5rem;
-  }
-
-  .stat-label {
-    font-size: 0.75rem;
-  }
-
-  .filters {
-    gap: 0.5rem;
-    padding: 0.5rem;
-  }
-
-  .filters button {
-    padding: 0.75rem 0.5rem;
-    font-size: 0.85rem;
-  }
-
-  .customer-card {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 1rem;
-    padding: 1.25rem;
-  }
-
-  /* 모바일: desktop-actions 숨기고 mobile-actions 표시 */
-  .desktop-actions {
-    display: none !important;
-  }
-
-  .mobile-actions {
-    display: flex !important;
-    gap: 0.5rem;
-    flex: 1;
-  }
-
-  /* 모바일: 순번과 버튼을 같은 행에 */
-  .customer-card > .queue-number,
-  .customer-card > .mobile-actions {
-    display: flex;
-  }
-
-  .customer-card > .queue-number {
-    flex-shrink: 0;
-  }
-
-  .customer-card > .mobile-actions {
-    flex: 1;
-  }
-
-  /* 순번과 버튼을 감싸는 래퍼 스타일 (DOM 구조 변경 없이 flexbox로 처리) */
-  .customer-card {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    grid-template-rows: auto 1fr;
-    gap: 1rem;
-  }
-
-  .queue-number {
-    grid-column: 1;
-    grid-row: 1;
-    min-width: 50px;
-    height: 50px;
-  }
-
-  .queue-number .number {
-    font-size: 1.5rem;
-  }
-
-  .mobile-actions {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: center;
-  }
-
-  .customer-info {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-  }
-
-  .customer-avatar {
-    width: 50px;
-    height: 50px;
-  }
-
-  .customer-name-row {
-    flex-wrap: wrap;
-  }
-
-  .customer-name {
-    font-size: 1.1rem;
-  }
-
-  .customer-time-status {
-    display: block;
-  }
-
-  .customer-time {
-    display: block;
-  }
-
-  .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    font-size: 0.8rem;
-  }
-
-  .action-btn {
-    flex: 1;
-    padding: 0.75rem 0.5rem;
-    font-size: 0.85rem;
-  }
-}
-
-/* 小さいモバイル画面 */
-@media (max-width: 480px) {
-  h1 {
-    font-size: 1.3rem;
-  }
-
-  .stat-value {
-    font-size: 1.75rem;
-  }
-
-  .queue-number {
-    min-width: 45px;
-    height: 45px;
-  }
-
-  .queue-number .number {
-    font-size: 1.3rem;
-  }
-
-  .action-btn {
-    padding: 0.6rem 0.4rem;
-    font-size: 0.8rem;
-  }
-}
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 </style>

@@ -173,15 +173,17 @@ onMounted(() => {
 </template>
 
 <style scoped>
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 .qr-code-container {
-  max-width: 800px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 1rem;
+  box-sizing: border-box;
 }
 
 h1 {
-  font-size: 2rem;
-  margin-bottom: 2rem;
+  font-size: 1.3rem;
+  margin: 0.5rem 0;
   color: #333;
   text-align: center;
 }
@@ -189,8 +191,8 @@ h1 {
 .loading,
 .error {
   text-align: center;
-  padding: 3rem;
-  font-size: 1.2rem;
+  padding: 2rem;
+  font-size: 1rem;
 }
 
 .error {
@@ -200,70 +202,65 @@ h1 {
 .qr-content {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 /* QR 코드 표시 */
 .qr-display {
   background: white;
   border-radius: 12px;
-  padding: 2rem;
+  padding: 1rem;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
-.qr-display h2 {
-  margin: 0 0 1.5rem 0;
-  color: #333;
-  font-size: 1.5rem;
+/* 店舗名を常に非表示 */
+.qr-store-name {
+  display: none;
 }
 
 .qr-image-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 1rem;
+  padding: 0.5rem;
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  margin: 0rem;
+  margin: 0 auto;
   max-width: 100%;
-  width: fit-content;
+  width: 100%;
   box-sizing: border-box;
 }
 
 .qr-image-wrapper canvas {
   display: block;
   width: 240px !important;
-  height: 300px !important;
-  max-width: 100%;
+  height: 240px !important;
+  max-width: calc(100vw - 4rem) !important;
+  max-height: calc(100vw - 4rem) !important;
   box-sizing: border-box;
 }
 
+/* 説明文を常に非表示 */
 .qr-instruction {
-  color: #666;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  margin: 1rem 0 0 0;
-  word-break: normal;
-  overflow-wrap: break-word;
-  white-space: normal;
+  display: none;
 }
 
 /* 대기 정보 */
 .waiting-info {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .info-card {
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: white;
-  padding: 1.5rem;
+  padding: 0.75rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
   text-decoration: none;
@@ -271,38 +268,41 @@ h1 {
   transition: all 0.3s;
 }
 
-.info-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+.info-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
 }
 
 .info-icon {
-  font-size: 2.5rem;
+  font-size: 2rem;
+  flex-shrink: 0;
 }
 
 .info-content {
   flex: 1;
+  min-width: 0;
 }
 
 .info-label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   opacity: 0.9;
   margin-bottom: 0.25rem;
 }
 
 .info-value {
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: bold;
 }
 
 /* 액션 버튼 */
 .action-buttons {
   display: flex;
-  gap: 0.25rem;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
 .action-button {
-  flex: 1;
+  width: 100%;
   padding: 1rem;
   font-size: 1rem;
   border: none;
@@ -317,8 +317,9 @@ h1 {
   color: white;
 }
 
-.action-button.download:hover {
+.action-button.download:active {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 .action-button.print {
@@ -326,93 +327,14 @@ h1 {
   color: white;
 }
 
-.action-button.print:hover {
+.action-button.print:active {
   background-color: #1976d2;
-}
-
-/* モバイル対応 */
-@media (max-width: 768px) {
-  .qr-code-container {
-    padding: 1rem;
-  }
-
-  h1 {
-    font-size: 1.5rem;
-    margin-top: 0rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .qr-display {
-    padding: 1rem;
-  }
-
-  /* モバイルでQR코드 위の店舗名を非表示 */
-  .qr-store-name {
-    display: none;
-  }
-
-  .qr-image-wrapper {
-    padding: 0.5rem;
-    margin-left: auto;
-    margin-right: auto;
-    box-sizing: border-box;
-    max-width: 100%;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-  }
-
-  .qr-image-wrapper canvas {
-    width: 240px !important;
-    height: 240px !important;
-    max-width: calc(100vw - 4rem) !important;
-    max-height: calc(100vw - 4rem) !important;
-  }
-
-  .info-card {
-    padding: 0.75rem 0.5rem 0.75rem 0.5rem;
-  }
-
-  .info-icon {
-    font-size: 2rem;
-  }
-
-  .info-value {
-    font-size: 1.5rem;
-  }
-
-  .action-buttons {
-    flex-direction: column;
-  }
-
-  .action-button {
-    width: 100%;
-    padding: 1.25rem;
-    font-size: 1.1rem;
-  }
-
-  /* モバイルで説明文を非表示 */
-  .qr-instruction {
-    display: none;
-  }
-}
-
-/* 小さいモバイル画面 */
-@media (max-width: 480px) {
-  h1 {
-    font-size: 1.3rem;
-  }
-
-  .action-button {
-    font-size: 1rem;
-    padding: 1rem;
-  }
+  transform: scale(0.98);
 }
 
 @media print {
   .action-buttons,
-  .waiting-info,
-  .waiting-preview {
+  .waiting-info {
     display: none;
   }
 }
