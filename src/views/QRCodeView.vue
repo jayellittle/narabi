@@ -145,7 +145,7 @@ onMounted(() => {
       <div class="qr-display">
         <h2 class="qr-store-name">{{ storeName }}</h2>
         <div class="qr-image-wrapper">
-          <qrcode-vue :value="qrCodeUrl" :size="300" level="H" render-as="canvas" />
+          <qrcode-vue :value="qrCodeUrl" :size="240" level="H" render-as="canvas" />
         </div>
         <p class="qr-instruction">
           お客様にこのQRコードをスキャンしていただくと、順番待ちリストに登録されます。
@@ -165,10 +165,8 @@ onMounted(() => {
 
       <!-- 액션 버튼 -->
       <div class="action-buttons">
-        <button @click="downloadQR" class="action-button download">
-          📥 QRコードをダウンロード
-        </button>
-        <button @click="printQR" class="action-button print">🖨️ QRコードを印刷</button>
+        <button @click="downloadQR" class="action-button download">📥 ダウンロード</button>
+        <button @click="printQR" class="action-button print">🖨️ 印刷</button>
       </div>
     </div>
   </div>
@@ -202,7 +200,7 @@ h1 {
 .qr-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0.5rem;
 }
 
 /* QR 코드 표시 */
@@ -228,7 +226,7 @@ h1 {
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  margin: 0 auto 1rem;
+  margin: 0rem;
   max-width: 100%;
   width: fit-content;
   box-sizing: border-box;
@@ -236,7 +234,7 @@ h1 {
 
 .qr-image-wrapper canvas {
   display: block;
-  width: 300px !important;
+  width: 240px !important;
   height: 300px !important;
   max-width: 100%;
   box-sizing: border-box;
@@ -300,7 +298,7 @@ h1 {
 /* 액션 버튼 */
 .action-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 0.25rem;
 }
 
 .action-button {
@@ -340,7 +338,8 @@ h1 {
 
   h1 {
     font-size: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-top: 0rem;
+    margin-bottom: 0.5rem;
   }
 
   .qr-display {
@@ -364,14 +363,14 @@ h1 {
   }
 
   .qr-image-wrapper canvas {
-    width: 200px !important;
-    height: 200px !important;
+    width: 240px !important;
+    height: 240px !important;
     max-width: calc(100vw - 4rem) !important;
     max-height: calc(100vw - 4rem) !important;
   }
 
   .info-card {
-    padding: 1.25rem;
+    padding: 0.75rem 0.5rem 0.75rem 0.5rem;
   }
 
   .info-icon {

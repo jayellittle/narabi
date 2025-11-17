@@ -17,13 +17,16 @@
               <span class="nav-icon">⚙️</span>
               招待承認
             </router-link>
-            <div class="menu-notice">
-              ℹ️ 招待を承認すると全てのメニューにアクセスできます
-            </div>
+            <div class="menu-notice">ℹ️ 招待を承認すると全てのメニューにアクセスできます</div>
           </template>
           <template v-else>
             <!-- active 사용자는 전체 메뉴 접근 가능 -->
-            <router-link :to="`/store/${storeId}`" class="nav-item" :class="{ active: isMenuPage }" exact>
+            <router-link
+              :to="`/store/${storeId}`"
+              class="nav-item"
+              :class="{ active: isMenuPage }"
+              exact
+            >
               <span class="nav-icon">🏠</span>
               メニュー
             </router-link>
@@ -52,14 +55,10 @@
       <div v-if="store" class="mobile-header">
         <div class="mobile-header-top">
           <button @click="isMenuPage ? goBack() : goToMenu()" class="mobile-back-btn-icon">
-            ←
+            ⬅️
           </button>
           <div class="mobile-user-info">
-            <img
-              :src="currentProfileImage"
-              alt="プロフィール画像"
-              class="mobile-user-avatar"
-            />
+            <img :src="currentProfileImage" alt="プロフィール画像" class="mobile-user-avatar" />
             <span class="mobile-user-name">{{ currentDisplayName }}</span>
           </div>
         </div>
@@ -145,9 +144,7 @@ const isMenuPage = computed(() => {
 // 現在のスタッフメンバー情報
 const currentStaffMember = computed(() => {
   if (!store.value || !currentUser.value) return null
-  return store.value.staffList?.find(
-    (s) => s.email === currentUser.value?.email
-  )
+  return store.value.staffList?.find((s) => s.email === currentUser.value?.email)
 })
 
 // プロフィール画像を取得 (優先順位: スタッフ画像 > ユーザー画像)
@@ -235,7 +232,7 @@ watch(
       }
     }
   },
-  { immediate: true }
+  { immediate: true },
 )
 
 const goBack = () => {
@@ -488,8 +485,8 @@ const goToMenu = () => {
 }
 
 .mobile-user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
