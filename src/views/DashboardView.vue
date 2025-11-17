@@ -19,13 +19,13 @@
               alt="プロフィール画像"
               class="profile-image"
             />
-            <div v-else class="profile-image-placeholder">
-              👤
-            </div>
+            <div v-else class="profile-image-placeholder">👤</div>
           </div>
           <div class="profile-info">
             <h3>{{ userProfile?.displayName || userProfile?.email || 'ユーザー' }}</h3>
-            <p v-if="userProfile?.displayName" class="profile-email">{{ userProfile?.email || '' }}</p>
+            <p v-if="userProfile?.displayName" class="profile-email">
+              {{ userProfile?.email || '' }}
+            </p>
             <p class="edit-hint">クリックして編集</p>
           </div>
         </div>
@@ -43,10 +43,16 @@
 
       <div v-else>
         <!-- 점포가 없을 때 -->
-        <div v-if="approvedStores.length === 0 && pendingStores.length === 0 && invitationPendingStores.length === 0" class="no-stores">
+        <div
+          v-if="
+            approvedStores.length === 0 &&
+            pendingStores.length === 0 &&
+            invitationPendingStores.length === 0
+          "
+          class="no-stores"
+        >
           <div class="no-stores-icon">🏪</div>
           <p>登録された店舗がありません。</p>
-          <button @click="goToRegisterStore" class="primary-btn">+ 店舗を登録</button>
         </div>
 
         <!-- 점포 목록 (관리메뉴 스타일) -->
@@ -60,7 +66,12 @@
           >
             <div class="store-card-header">
               <div class="store-image-container">
-                <img v-if="store.imageUrl" :src="store.imageUrl" alt="店舗画像" class="store-image" />
+                <img
+                  v-if="store.imageUrl"
+                  :src="store.imageUrl"
+                  alt="店舗画像"
+                  class="store-image"
+                />
                 <div v-else class="store-image-placeholder">📩</div>
               </div>
             </div>
@@ -81,7 +92,12 @@
           >
             <div class="store-card-header">
               <div class="store-image-container">
-                <img v-if="store.imageUrl" :src="store.imageUrl" alt="店舗画像" class="store-image" />
+                <img
+                  v-if="store.imageUrl"
+                  :src="store.imageUrl"
+                  alt="店舗画像"
+                  class="store-image"
+                />
                 <div v-else class="store-image-placeholder">🏪</div>
               </div>
             </div>
@@ -93,14 +109,15 @@
           </div>
 
           <!-- 관리자 승인 대기 중 -->
-          <div
-            v-for="store in pendingStores"
-            :key="store.id"
-            class="store-card pending"
-          >
+          <div v-for="store in pendingStores" :key="store.id" class="store-card pending">
             <div class="store-card-header">
               <div class="store-image-container">
-                <img v-if="store.imageUrl" :src="store.imageUrl" alt="店舗画像" class="store-image" />
+                <img
+                  v-if="store.imageUrl"
+                  :src="store.imageUrl"
+                  alt="店舗画像"
+                  class="store-image"
+                />
                 <div v-else class="store-image-placeholder">⏳</div>
               </div>
             </div>
@@ -123,9 +140,17 @@
           <div class="form-group">
             <label>プロフィール画像</label>
             <div class="profile-image-upload">
-              <div v-if="profileImagePreview || userProfile?.profileImageUrl" class="profile-preview">
-                <img :src="profileImagePreview || userProfile?.profileImageUrl" alt="プロフィール" />
-                <button type="button" @click="removeProfileImage" class="remove-image-btn">✕</button>
+              <div
+                v-if="profileImagePreview || userProfile?.profileImageUrl"
+                class="profile-preview"
+              >
+                <img
+                  :src="profileImagePreview || userProfile?.profileImageUrl"
+                  alt="プロフィール"
+                />
+                <button type="button" @click="removeProfileImage" class="remove-image-btn">
+                  ✕
+                </button>
               </div>
               <label v-else class="profile-upload-label">
                 <input
@@ -144,26 +169,19 @@
 
           <div class="form-group">
             <label>表示名（任意）</label>
-            <input
-              v-model="editableProfile.displayName"
-              type="text"
-              placeholder="表示名を入力"
-            />
+            <input v-model="editableProfile.displayName" type="text" placeholder="表示名を入力" />
           </div>
 
           <div class="form-group">
             <label>メールアドレス</label>
-            <input
-              v-model="editableProfile.email"
-              type="email"
-              disabled
-              class="disabled-input"
-            />
+            <input v-model="editableProfile.email" type="email" disabled class="disabled-input" />
             <p class="form-hint">メールアドレスは変更できません</p>
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="closeProfileModal" class="cancel-button">キャンセル</button>
+            <button type="button" @click="closeProfileModal" class="cancel-button">
+              キャンセル
+            </button>
             <button type="submit" :disabled="isUpdatingProfile" class="submit-button">
               {{ isUpdatingProfile ? '更新中...' : '更新' }}
             </button>
@@ -178,7 +196,16 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { signOut } from 'firebase/auth'
 import { useRouter, useRoute } from 'vue-router'
-import { getFirestore, collection, query, where, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore'
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  getDocs,
+  doc,
+  getDoc,
+  updateDoc,
+} from 'firebase/firestore'
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { auth } from '../firebase'
 
@@ -308,7 +335,8 @@ const loadStores = async () => {
 
       // staffList에서 내 이메일이 있는지 확인 (active 또는 pending)
       const myStaffEntry = staffList.find(
-        (staff: any) => staff.email === user.email && (staff.status === 'active' || staff.status === 'pending'),
+        (staff: any) =>
+          staff.email === user.email && (staff.status === 'active' || staff.status === 'pending'),
       )
 
       if (myStaffEntry && !storesMap.has(doc.id)) {
@@ -317,7 +345,10 @@ const loadStores = async () => {
           name: data.name as string,
           address: data.address as string,
           imageUrl: data.imageUrl as string | undefined,
-          status: myStaffEntry.status === 'pending' ? 'invitation-pending' : ((data.status as string) || 'approved'),
+          status:
+            myStaffEntry.status === 'pending'
+              ? 'invitation-pending'
+              : (data.status as string) || 'approved',
         })
       }
     })
@@ -481,12 +512,15 @@ onMounted(() => {
 })
 
 // route가 변경될 때 점포 목록 새로고침
-watch(() => route.path, (newPath, oldPath) => {
-  // dashboard 페이지로 돌아왔을 때만 새로고침
-  if (newPath === '/dashboard' && oldPath !== '/dashboard') {
-    loadStores()
-  }
-})
+watch(
+  () => route.path,
+  (newPath, oldPath) => {
+    // dashboard 페이지로 돌아왔을 때만 새로고침
+    if (newPath === '/dashboard' && oldPath !== '/dashboard') {
+      loadStores()
+    }
+  },
+)
 </script>
 
 <style scoped>
@@ -503,7 +537,13 @@ watch(() => route.path, (newPath, oldPath) => {
   border-right: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
-  padding: 1.5rem;
+  box-sizing: border-box;
+}
+
+.profile-section {
+  width: 100%;
+  padding: 2rem;
+  box-sizing: border-box;
 }
 
 .profile-header {
@@ -520,13 +560,13 @@ watch(() => route.path, (newPath, oldPath) => {
 }
 
 .logout-btn {
-  padding: 0.5rem 1rem;
+  padding: 0.125rem 0.25rem;
   background-color: #f44336;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.5rem;
   transition: background-color 0.3s;
 }
 
@@ -538,11 +578,13 @@ watch(() => route.path, (newPath, oldPath) => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .profile-card:hover {
@@ -551,13 +593,13 @@ watch(() => route.path, (newPath, oldPath) => {
 }
 
 .profile-image-container {
-  width: 100px;
-  height: 100px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .profile-image {
@@ -580,25 +622,28 @@ watch(() => route.path, (newPath, oldPath) => {
 .profile-info {
   text-align: center;
   width: 100%;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .profile-info h3 {
   margin: 0 0 0.5rem 0;
   color: #333;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  word-break: break-word;
 }
 
 .profile-email {
   margin: 0 0 0.5rem 0;
   color: #666;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   word-break: break-all;
 }
 
 .edit-hint {
   margin: 0;
   color: #667eea;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -1028,14 +1073,17 @@ watch(() => route.path, (newPath, oldPath) => {
 
   .profile-section {
     width: 100%;
-    padding: 1rem;
+    padding: 1rem 0rem 0.5rem 0rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   /* 모바일에서 프로필 헤더 - 로그아웃 버튼만 */
   .profile-header {
     position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
+    top: 0.75rem;
+    right: 1rem;
     padding: 0;
     border: none;
     margin: 0;
@@ -1049,6 +1097,8 @@ watch(() => route.path, (newPath, oldPath) => {
   /* 로그아웃 버튼 */
   .logout-btn {
     position: static;
+    padding: 0.125rem 0.25rem;
+    font-size: 0.5rem;
   }
 
   .profile-card {
@@ -1056,9 +1106,9 @@ watch(() => route.path, (newPath, oldPath) => {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    width: auto;
-    margin: 0 auto;
-    max-width: none;
+    width: 100%;
+    max-width: 400px;
+    margin: 0;
   }
 
   .profile-image-container {

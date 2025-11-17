@@ -33,7 +33,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() &&
                        request.resource.data.ownerId == request.auth.uid;
 
-      // 업데이트: 오너 또는 스태프
+      // 업데이트: 오너만
       allow update: if isStoreOwner(storeId);
 
       // 삭제: 오너만

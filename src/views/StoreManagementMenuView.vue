@@ -9,21 +9,24 @@
       <router-link :to="`/store/${storeId}/qr`" class="menu-card qr">
         <div class="menu-icon">📱</div>
         <h2>QRコード表示</h2>
-        <p>お客様が順番待ちに登録するためのQRコードを表示・印刷します</p>
+        <p class="menu-description">お客様が順番待ちに登録するためのQRコードを表示・印刷します</p>
         <div class="menu-arrow">→</div>
       </router-link>
 
       <router-link :to="`/store/${storeId}/waiting`" class="menu-card waiting">
         <div class="menu-icon">👥</div>
-        <h2>順番待ちリスト</h2>
-        <p>現在待機中のお客様を確認し、呼び出しを行います</p>
+        <div class="menu-title-with-badge">
+          <h2>順番待ちリスト</h2>
+          <span v-if="waitingCount > 0" class="waiting-badge">{{ waitingCount }}</span>
+        </div>
+        <p class="menu-description">現在待機中のお客様を確認し、呼び出しを行います</p>
         <div class="menu-arrow">→</div>
       </router-link>
 
       <router-link :to="`/store/${storeId}/staff`" class="menu-card staff">
         <div class="menu-icon">⚙️</div>
         <h2>スタッフ管理</h2>
-        <p>店舗スタッフの招待・管理を行います</p>
+        <p class="menu-description">店舗スタッフの招待・管理を行います</p>
         <div class="menu-arrow">→</div>
       </router-link>
     </div>
@@ -31,10 +34,36 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { getFirestore, collection, query, where, onSnapshot } from 'firebase/firestore'
 
 const route = useRoute()
 const storeId = route.params.storeId as string
+const db = getFirestore()
+
+// 대기 중인 고객 수
+const waitingCount = ref(0)
+let unsubscribe: (() => void) | null = null
+
+// 대기 목록 실시간 구독
+onMounted(() => {
+  const q = query(
+    collection(db, `stores/${storeId}/waitingList`),
+    where('status', '==', 'waiting')
+  )
+
+  unsubscribe = onSnapshot(q, (snapshot) => {
+    waitingCount.value = snapshot.size
+  })
+})
+
+// 컴포넌트 언마운트 시 구독 해제
+onUnmounted(() => {
+  if (unsubscribe) {
+    unsubscribe()
+  }
+})
 </script>
 
 <style scoped>
@@ -159,11 +188,33 @@ const storeId = route.params.storeId as string
   transform: scale(1.1) rotate(5deg);
 }
 
+.menu-title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  justify-content: center;
+}
+
 .menu-card h2 {
   margin: 0 0 0.5rem 0;
   font-size: 1.25rem;
   color: #333;
   font-weight: 600;
+}
+
+.waiting-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  background-color: #f44336;
+  color: white;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: bold;
 }
 
 .menu-card p {
@@ -213,7 +264,12 @@ const storeId = route.params.storeId as string
   }
 
   .menu-card {
-    padding: 2rem 1.5rem;
+    padding: 0.75rem 1rem;
+  }
+
+  /* モバイルで説明文を非表示 */
+  .menu-description {
+    display: none;
   }
 
   .menu-icon {
@@ -224,10 +280,6 @@ const storeId = route.params.storeId as string
 
   .menu-card h2 {
     font-size: 1.3rem;
-  }
-
-  .menu-card p {
-    font-size: 0.9rem;
   }
 
   /* モバイルではhoverの代わりにタップ効果 */

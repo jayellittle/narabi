@@ -143,57 +143,30 @@ onMounted(() => {
     <div v-else class="qr-content">
       <!-- QR 코드 표시 -->
       <div class="qr-display">
-        <h2>{{ storeName }}</h2>
+        <h2 class="qr-store-name">{{ storeName }}</h2>
         <div class="qr-image-wrapper">
-          <qrcode-vue :value="qrCodeUrl" :size="300" level="H" render-as="canvas" />
+          <qrcode-vue :value="qrCodeUrl" :size="240" level="H" render-as="canvas" />
         </div>
         <p class="qr-instruction">
           お客様にこのQRコードをスキャンしていただくと、順番待ちリストに登録されます。
         </p>
       </div>
 
-      <!-- 대기 인원 표시 -->
+      <!-- 대기 인원 표시 (클릭 가능) -->
       <div class="waiting-info">
-        <div class="info-card">
+        <router-link :to="`/store/${storeId}/waiting`" class="info-card">
           <div class="info-icon">👥</div>
           <div class="info-content">
             <div class="info-label">現在順番待ち中</div>
             <div class="info-value">{{ waitingList.length }}名</div>
           </div>
-        </div>
+        </router-link>
       </div>
 
       <!-- 액션 버튼 -->
       <div class="action-buttons">
-        <button @click="downloadQR" class="action-button download">
-          📥 QRコードをダウンロード
-        </button>
-        <button @click="printQR" class="action-button print">🖨️ QRコードを印刷</button>
-      </div>
-
-      <!-- 대기자 목록 미리보기 -->
-      <div class="waiting-preview">
-        <h3>待機中のお客様</h3>
-        <div v-if="waitingList.length === 0" class="no-waiting">現在待機中のお客様はいません。</div>
-        <div v-else class="preview-list">
-          <div v-for="customer in waitingList.slice(0, 5)" :key="customer.id" class="preview-item">
-            <img
-              :src="customer.pictureUrl || '/default-avatar.png'"
-              :alt="customer.displayName"
-              class="preview-avatar"
-            />
-            <div class="preview-info">
-              <div class="preview-name">{{ customer.displayName }}</div>
-              <div class="preview-number">順番: {{ customer.queueNumber }}番</div>
-            </div>
-            <div :class="['preview-status', customer.status]">
-              {{ customer.status === 'waiting' ? '待機中' : '呼出済' }}
-            </div>
-          </div>
-          <div v-if="waitingList.length > 5" class="preview-more">
-            他 {{ waitingList.length - 5 }}名
-          </div>
-        </div>
+        <button @click="downloadQR" class="action-button download">📥 ダウンロード</button>
+        <button @click="printQR" class="action-button print">🖨️ 印刷</button>
       </div>
     </div>
   </div>
@@ -227,7 +200,7 @@ h1 {
 .qr-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0.5rem;
 }
 
 /* QR 코드 표시 */
@@ -253,7 +226,7 @@ h1 {
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
-  margin: 0 auto 1rem;
+  margin: 0rem;
   max-width: 100%;
   width: fit-content;
   box-sizing: border-box;
@@ -261,7 +234,7 @@ h1 {
 
 .qr-image-wrapper canvas {
   display: block;
-  width: 300px !important;
+  width: 240px !important;
   height: 300px !important;
   max-width: 100%;
   box-sizing: border-box;
@@ -272,9 +245,9 @@ h1 {
   font-size: 0.9rem;
   line-height: 1.6;
   margin: 1rem 0 0 0;
-  word-wrap: break-word;
-  word-break: keep-all;
+  word-break: normal;
   overflow-wrap: break-word;
+  white-space: normal;
 }
 
 /* 대기 정보 */
@@ -293,6 +266,14 @@ h1 {
   padding: 1.5rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.info-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
 }
 
 .info-icon {
@@ -317,7 +298,7 @@ h1 {
 /* 액션 버튼 */
 .action-buttons {
   display: flex;
-  gap: 1rem;
+  gap: 0.25rem;
 }
 
 .action-button {
@@ -349,87 +330,6 @@ h1 {
   background-color: #1976d2;
 }
 
-/* 대기자 미리보기 */
-.waiting-preview {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.waiting-preview h3 {
-  margin: 0 0 1rem 0;
-  color: #333;
-  font-size: 1.2rem;
-}
-
-.no-waiting {
-  text-align: center;
-  padding: 2rem;
-  color: #999;
-}
-
-.preview-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.preview-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 0.75rem;
-  background: #f5f5f5;
-  border-radius: 8px;
-}
-
-.preview-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.preview-info {
-  flex: 1;
-}
-
-.preview-name {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 0.25rem;
-}
-
-.preview-number {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.preview-status {
-  padding: 0.25rem 0.75rem;
-  border-radius: 12px;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.preview-status.waiting {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.preview-status.called {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.preview-more {
-  text-align: center;
-  padding: 0.5rem;
-  color: #666;
-  font-size: 0.9rem;
-}
-
 /* モバイル対応 */
 @media (max-width: 768px) {
   .qr-code-container {
@@ -438,15 +338,17 @@ h1 {
 
   h1 {
     font-size: 1.5rem;
-    margin-bottom: 1.5rem;
+    margin-top: 0rem;
+    margin-bottom: 0.5rem;
   }
 
   .qr-display {
     padding: 1rem;
   }
 
-  .qr-display h2 {
-    font-size: 1.2rem;
+  /* モバイルでQR코드 위の店舗名を非表示 */
+  .qr-store-name {
+    display: none;
   }
 
   .qr-image-wrapper {
@@ -455,17 +357,20 @@ h1 {
     margin-right: auto;
     box-sizing: border-box;
     max-width: 100%;
-    width: fit-content;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
 
   .qr-image-wrapper canvas {
-    width: 180px !important;
-    height: 180px !important;
-    max-width: 100%;
+    width: 240px !important;
+    height: 240px !important;
+    max-width: calc(100vw - 4rem) !important;
+    max-height: calc(100vw - 4rem) !important;
   }
 
   .info-card {
-    padding: 1.25rem;
+    padding: 0.75rem 0.5rem 0.75rem 0.5rem;
   }
 
   .info-icon {
@@ -486,17 +391,9 @@ h1 {
     font-size: 1.1rem;
   }
 
-  .waiting-preview {
-    padding: 1.25rem;
-  }
-
-  .preview-item {
-    padding: 1rem;
-  }
-
-  .preview-avatar {
-    width: 50px;
-    height: 50px;
+  /* モバイルで説明文を非表示 */
+  .qr-instruction {
+    display: none;
   }
 }
 
