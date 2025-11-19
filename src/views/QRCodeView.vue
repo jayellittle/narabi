@@ -281,6 +281,7 @@ h1 {
 .info-content {
   flex: 1;
   min-width: 0;
+  text-align: center;
 }
 
 .info-label {
@@ -297,7 +298,7 @@ h1 {
 /* 액션 버튼 */
 .action-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 0.75rem;
 }
 

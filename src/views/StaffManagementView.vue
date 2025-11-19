@@ -60,6 +60,7 @@ const displayNameForm = ref({
 })
 const staffImageFile = ref<File | null>(null)
 const staffImagePreview = ref<string | null>(null)
+const staffImageToDelete = ref(false)
 const isUpdatingDisplayName = ref(false)
 
 // 초대 승인 시 표시명 입력 모달
@@ -156,9 +157,40 @@ const loadStore = async () => {
       error.value = '店舗が見つかりませんでした。'
       return
     }
+
+    // スタッフリストにユーザー情報を追加
+    if (storeData.staffList && storeData.staffList.length > 0) {
+      const staffListWithUserInfo = await Promise.all(
+        storeData.staffList.map(async (staff) => {
+          // すでに表示名と画像がある場合はそのまま使用
+          if (staff.displayName && staff.staffImageUrl) {
+            return staff
+          }
+
+          // users コレクションから情報を取得
+          try {
+            const userDoc = await getDoc(doc(db, 'users', staff.userId || staff.email))
+            if (userDoc.exists()) {
+              const userData = userDoc.data()
+              return {
+                ...staff,
+                userDisplayName: userData.displayName || null,
+                userPhotoURL: userData.photoURL || null,
+              }
+            }
+          } catch (error) {
+            console.error('ユーザー情報の取得に失敗:', error)
+          }
+
+          return staff
+        })
+      )
+      storeData.staffList = staffListWithUserInfo
+    }
+
     store.value = storeData
 
-    // 참여 요청도 함께 로드
+    // 参여 요청도 함께 로드
     await loadJoinRequests()
   } catch (err) {
     console.error('매장 로드 실패:', err)
@@ -671,20 +703,24 @@ onMounted(() => {
             <div class="staff-info">
               <div class="staff-avatar-container">
                 <img
-                  :src="staff.staffImageUrl || currentUser?.photoURL || '/default-avatar.png'"
-                  :alt="staff.displayName || staff.email"
+                  v-if="staff.staffImageUrl || staff.userPhotoURL || (staff.email === currentUserEmail && currentUser?.photoURL)"
+                  :src="staff.staffImageUrl || staff.userPhotoURL || (staff.email === currentUserEmail ? currentUser?.photoURL : '')"
+                  :alt="staff.displayName || staff.userDisplayName || staff.email"
                   class="staff-avatar"
                 />
+                <div v-else class="staff-avatar staff-avatar-default">
+                  👤
+                </div>
                 <div class="staff-role-badge">
                   {{ staff.role === 'owner' ? '👑' : '⚙️' }}
                 </div>
               </div>
               <div class="staff-details">
                 <div class="staff-name">
-                  {{ staff.displayName || staff.email }}
+                  {{ staff.displayName || staff.userDisplayName || (staff.email === currentUserEmail ? currentUser?.displayName : null) || staff.email }}
                   <span v-if="staff.email === currentUserEmail" class="you-badge"> (あなた) </span>
                 </div>
-                <div v-if="staff.displayName" class="staff-email-small">{{ staff.email }}</div>
+                <div v-if="staff.displayName || staff.userDisplayName || (staff.email === currentUserEmail && currentUser?.displayName)" class="staff-email-small">{{ staff.email }}</div>
                 <div class="staff-meta-row">
                   <div class="staff-meta">
                     {{ getRoleLabel(staff.role) }}
@@ -1025,6 +1061,15 @@ h1 {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #e0e0e0;
+}
+
+.staff-avatar-default {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background-color: #f5f5f5;
+  color: #999;
 }
 
 .staff-role-badge {

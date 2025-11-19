@@ -105,23 +105,7 @@ export const registerWaitlist = functions
         throw new Error(JSON.stringify(lineProfile))
       }
 
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000)
-      const recentRegistrations = await db
-        .collection('stores')
-        .doc(storeId)
-        .collection('waitingList')
-        .where('lineUserId', '==', lineProfile.userId)
-        .where('createdAt', '>', fiveMinutesAgo)
-        .get()
-
-      if (!recentRegistrations.empty) {
-        logger.warn('중복 등록 시도:', {
-          lineUserId: lineProfile.userId,
-          storeId: storeId,
-        })
-        throw new functions.https.HttpsError('already-exists', '既に登録されています。')
-      }
-
+      // 現在待機中のユーザーのみチェック（完了・キャンセル済みは再登録可能）
       const existingWaiting = await db
         .collection('stores')
         .doc(storeId)
@@ -131,7 +115,7 @@ export const registerWaitlist = functions
         .get()
 
       if (!existingWaiting.empty) {
-        logger.warn('이미 대기 중인 사용자:', {
+        logger.warn('既に待機中のユーザー:', {
           lineUserId: lineProfile.userId,
           storeId: storeId,
         })
