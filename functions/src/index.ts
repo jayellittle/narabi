@@ -867,17 +867,18 @@ export const registerManualCustomer = functions.https.onCall(async (data, contex
     // 대기열 컬렉션 참조
     const waitingListRef = db.collection('stores').doc(storeId).collection('waitingList')
 
-    // 현재 대기 중인 고객 수 확인하여 queue number 결정
-    const activeCustomersSnapshot = await waitingListRef
-      .where('status', 'in', ['waiting', 'called'])
-      .orderBy('queueNumber', 'desc')
-      .limit(1)
-      .get()
+    // 현재 대기 중인 모든 고객을 가져와서 최대 queue number 확인
+    const allCustomersSnapshot = await waitingListRef.get()
 
     let nextQueueNumber = 1
-    if (!activeCustomersSnapshot.empty) {
-      const lastCustomer = activeCustomersSnapshot.docs[0].data()
-      nextQueueNumber = (lastCustomer.queueNumber || 0) + 1
+    if (!allCustomersSnapshot.empty) {
+      const queueNumbers = allCustomersSnapshot.docs
+        .map((doc) => doc.data().queueNumber || 0)
+        .filter((num) => typeof num === 'number')
+
+      if (queueNumbers.length > 0) {
+        nextQueueNumber = Math.max(...queueNumbers) + 1
+      }
     }
 
     // 고유 ID 생성
