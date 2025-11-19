@@ -304,13 +304,14 @@ h1 {
 
 .action-button {
   width: 100%;
-  padding: 1rem;
-  font-size: 1rem;
+  padding: 0.75rem 0.5rem;
+  font-size: 0.9rem;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .action-button.download {
