@@ -524,42 +524,51 @@ watch(
 </script>
 
 <style scoped>
+/* ========== モバイルファースト: すべてのデバイスで同じUIを表示 ========== */
 .dashboard-container {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background-color: #f5f5f5;
 }
 
 /* ========== 프로필 사이드바 ========== */
 .profile-sidebar {
-  width: 300px;
+  width: 100%;
   background: white;
-  border-right: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
+  border-right: none;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0;
+  display: block;
+  position: relative;
   box-sizing: border-box;
 }
 
 .profile-section {
   width: 100%;
-  padding: 2rem;
+  padding: 1rem 0rem 0.5rem 0rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   box-sizing: border-box;
 }
 
 .profile-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  padding: 0;
+  border: none;
+  margin: 0;
+  z-index: 10;
 }
 
 .profile-header h2 {
-  margin: 0;
-  color: #4caf50;
-  font-size: 1.3rem;
+  display: none;
 }
 
 .logout-btn {
+  position: static;
   padding: 0.125rem 0.25rem;
   background-color: #f44336;
   color: white;
@@ -570,36 +579,41 @@ watch(
   transition: background-color 0.3s;
 }
 
-.logout-btn:hover {
+.logout-btn:active {
   background-color: #da190b;
+  transform: scale(0.95);
 }
 
 .profile-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  gap: 1rem;
   padding: 1rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 16px;
   cursor: pointer;
   transition: all 0.3s;
   width: 100%;
+  max-width: 400px;
+  margin: 0;
   box-sizing: border-box;
 }
 
-.profile-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+.profile-card:active {
+  transform: scale(0.98);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .profile-image-container {
-  width: 80px;
-  height: 80px;
+  width: 60px;
+  height: 60px;
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid white;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 .profile-image {
@@ -616,12 +630,12 @@ watch(
   justify-content: center;
   background-color: #667eea;
   color: white;
-  font-size: 3rem;
+  font-size: 2.5rem;
 }
 
 .profile-info {
-  text-align: center;
-  width: 100%;
+  text-align: left;
+  flex: 1;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
@@ -629,42 +643,43 @@ watch(
 .profile-info h3 {
   margin: 0 0 0.5rem 0;
   color: #333;
-  font-size: 1.1rem;
+  font-size: 1rem;
   word-break: break-word;
 }
 
 .profile-email {
   margin: 0 0 0.5rem 0;
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   word-break: break-all;
 }
 
 .edit-hint {
   margin: 0;
   color: #667eea;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 
 /* ========== 점포 컨텐츠 ========== */
 .stores-content {
   flex: 1;
-  padding: 2rem;
+  padding: 1rem;
   overflow-y: auto;
 }
 
 .stores-header {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: flex-start;
   margin-bottom: 2rem;
 }
 
 .stores-header h1 {
   margin: 0;
   color: #333;
-  font-size: 2rem;
+  font-size: 1.5rem;
 }
 
 .add-store-header-btn {
@@ -679,10 +694,10 @@ watch(
   transition: all 0.3s;
 }
 
-.add-store-header-btn:hover {
+.add-store-header-btn:active {
   background-color: #45a049;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.2);
 }
 
 .loading {
@@ -726,8 +741,8 @@ watch(
 /* ========== 점포 그리드 (관리메뉴 스타일) ========== */
 .stores-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: 1fr;
+  gap: 1rem;
 }
 
 .store-card {
@@ -756,13 +771,13 @@ watch(
   transition: transform 0.3s;
 }
 
-.store-card:hover::before {
+.store-card:active::before {
   transform: scaleX(1);
 }
 
-.store-card.approved:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+.store-card.approved:active {
+  transform: scale(0.98);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   border-color: #4caf50;
 }
 
@@ -770,9 +785,9 @@ watch(
   background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
 }
 
-.store-card.invitation-pending:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+.store-card.invitation-pending:active {
+  transform: scale(0.98);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
   border-color: #ff9800;
 }
 
@@ -785,7 +800,7 @@ watch(
   cursor: default;
 }
 
-.store-card.pending:hover {
+.store-card.pending:active {
   transform: none;
   border-color: transparent;
 }
@@ -865,7 +880,7 @@ watch(
   transition: all 0.3s;
 }
 
-.store-card:hover .store-card-arrow {
+.store-card:active .store-card-arrow {
   opacity: 1;
   transform: translateX(0);
 }
@@ -1038,8 +1053,9 @@ watch(
   color: #333;
 }
 
-.cancel-button:hover {
+.cancel-button:active {
   background-color: #e0e0e0;
+  transform: scale(0.98);
 }
 
 .submit-button {
@@ -1047,8 +1063,9 @@ watch(
   color: white;
 }
 
-.submit-button:hover:not(:disabled) {
+.submit-button:active:not(:disabled) {
   background-color: #45a049;
+  transform: scale(0.98);
 }
 
 .submit-button:disabled {
@@ -1056,98 +1073,5 @@ watch(
   cursor: not-allowed;
 }
 
-/* ========== 반응형 (모바일) ========== */
-@media (max-width: 768px) {
-  .dashboard-container {
-    flex-direction: column;
-  }
-
-  .profile-sidebar {
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid #e0e0e0;
-    padding: 0;
-    display: block;
-    position: relative;
-  }
-
-  .profile-section {
-    width: 100%;
-    padding: 1rem 0rem 0.5rem 0rem;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  /* 모바일에서 프로필 헤더 - 로그아웃 버튼만 */
-  .profile-header {
-    position: absolute;
-    top: 0.75rem;
-    right: 1rem;
-    padding: 0;
-    border: none;
-    margin: 0;
-    z-index: 10;
-  }
-
-  .profile-header h2 {
-    display: none;
-  }
-
-  /* 로그아웃 버튼 */
-  .logout-btn {
-    position: static;
-    padding: 0.125rem 0.25rem;
-    font-size: 0.5rem;
-  }
-
-  .profile-card {
-    flex-direction: row;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    width: 100%;
-    max-width: 400px;
-    margin: 0;
-  }
-
-  .profile-image-container {
-    width: 60px;
-    height: 60px;
-    margin-bottom: 0;
-    flex-shrink: 0;
-  }
-
-  .profile-info {
-    text-align: left;
-    flex: 1;
-  }
-
-  .profile-info h3 {
-    font-size: 1rem;
-  }
-
-  .profile-email {
-    font-size: 0.8rem;
-  }
-
-  .stores-content {
-    padding: 1rem;
-  }
-
-  .stores-header {
-    flex-direction: column;
-    gap: 1rem;
-    align-items: flex-start;
-  }
-
-  .stores-header h1 {
-    font-size: 1.5rem;
-  }
-
-  .stores-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-}
+/* ========== モバイルファースト: すべてのデバイスで同じUIを表示 ========== */
 </style>

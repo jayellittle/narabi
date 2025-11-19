@@ -67,36 +67,38 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
 .management-menu-container {
-  max-width: 1000px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
-  min-height: 100%;
+  padding: 1rem;
+  min-height: 100vh;
+  box-sizing: border-box;
 }
 
 /* ウェルカムセクション */
 .welcome-section {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .welcome-section h1 {
-  font-size: 2rem;
+  font-size: 1.5rem;
   color: #333;
   margin: 0 0 0.5rem 0;
   font-weight: 700;
 }
 
 .subtitle {
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: #666;
   margin: 0;
 }
 
-/* メニューグリッド */
+/* メニューグリッド - 常に1列 */
 .menu-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: 1fr;
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -108,7 +110,7 @@ onUnmounted(() => {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 1.5rem 1.5rem;
+  padding: 1.25rem 1rem;
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -131,22 +133,16 @@ onUnmounted(() => {
   transition: transform 0.3s;
 }
 
-.menu-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-  border-color: #667eea;
+.menu-card:active {
+  transform: scale(0.98);
 }
 
-.menu-card:hover::before {
+.menu-card:active::before {
   transform: scaleX(1);
 }
 
-.menu-card:active {
-  transform: translateY(-4px);
-}
-
 /* カード別の色 */
-.menu-card.qr:hover {
+.menu-card.qr:active {
   border-color: #4caf50;
 }
 
@@ -154,7 +150,7 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
 }
 
-.menu-card.waiting:hover {
+.menu-card.waiting:active {
   border-color: #2196f3;
 }
 
@@ -162,7 +158,7 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
 }
 
-.menu-card.staff:hover {
+.menu-card.staff:active {
   border-color: #ff9800;
 }
 
@@ -172,8 +168,8 @@ onUnmounted(() => {
 
 /* メニューアイコン */
 .menu-icon {
-  font-size: 3rem;
-  margin-bottom: 0.75rem;
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
   width: 70px;
   height: 70px;
   display: flex;
@@ -182,10 +178,7 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 16px;
   transition: transform 0.3s;
-}
-
-.menu-card:hover .menu-icon {
-  transform: scale(1.1) rotate(5deg);
+  flex-shrink: 0;
 }
 
 .menu-title-with-badge {
@@ -194,11 +187,12 @@ onUnmounted(() => {
   gap: 0.5rem;
   width: 100%;
   justify-content: center;
+  flex-wrap: wrap;
 }
 
 .menu-card h2 {
   margin: 0 0 0.5rem 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
   color: #333;
   font-weight: 600;
 }
@@ -217,16 +211,17 @@ onUnmounted(() => {
   font-weight: bold;
 }
 
+/* 説明文 - 常に表示 */
 .menu-card p {
   margin: 0;
   font-size: 0.85rem;
   color: #666;
-  line-height: 1.5;
+  line-height: 1.4;
   flex: 1;
 }
 
 .menu-arrow {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   font-size: 1.25rem;
   color: #667eea;
   font-weight: bold;
@@ -235,80 +230,8 @@ onUnmounted(() => {
   transition: all 0.3s;
 }
 
-.menu-card:hover .menu-arrow {
+.menu-card:active .menu-arrow {
   opacity: 1;
   transform: translateX(0);
-}
-
-/* モバイル対応 */
-@media (max-width: 768px) {
-  .management-menu-container {
-    padding: 1.5rem 1rem;
-  }
-
-  .welcome-section {
-    margin-bottom: 2rem;
-  }
-
-  .welcome-section h1 {
-    font-size: 1.8rem;
-  }
-
-  .subtitle {
-    font-size: 1rem;
-  }
-
-  .menu-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
-  .menu-card {
-    padding: 0.75rem 1rem;
-  }
-
-  /* モバイルで説明文を非表示 */
-  .menu-description {
-    display: none;
-  }
-
-  .menu-icon {
-    font-size: 3rem;
-    width: 80px;
-    height: 80px;
-  }
-
-  .menu-card h2 {
-    font-size: 1.3rem;
-  }
-
-  /* モバイルではhoverの代わりにタップ効果 */
-  .menu-card:active {
-    transform: scale(0.98);
-  }
-}
-
-/* タブレット対応 */
-@media (min-width: 769px) and (max-width: 1024px) {
-  .menu-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-/* 小さいモバイル画面 */
-@media (max-width: 480px) {
-  .welcome-section h1 {
-    font-size: 1.5rem;
-  }
-
-  .menu-card {
-    padding: 1.5rem 1rem;
-  }
-
-  .menu-icon {
-    font-size: 2.5rem;
-    width: 70px;
-    height: 70px;
-  }
 }
 </style>
