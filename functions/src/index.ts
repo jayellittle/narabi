@@ -822,6 +822,101 @@ export const getEstimatedWaitTime = functions.https.onCall(async (data) => {
 })
 
 // ========================================
+// 수동 고객 등록 (스태프용)
+// ========================================
+export const registerManualCustomer = functions.https.onCall(async (data, context) => {
+  // 認証チェック
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'ログインが必要です。')
+  }
+
+  const { storeId, displayName, partySize, phoneNumber } = data
+  const userEmail = context.auth.token.email
+
+  if (!storeId || !displayName || !partySize || !phoneNumber) {
+    throw new functions.https.HttpsError('invalid-argument', '必要な情報が不足しています。')
+  }
+
+  if (!userEmail) {
+    throw new functions.https.HttpsError('invalid-argument', 'メールアドレスが取得できません。')
+  }
+
+  try {
+    // スタッフ権限確認
+    const storeRef = db.collection('stores').doc(storeId)
+    const storeDoc = await storeRef.get()
+
+    if (!storeDoc.exists) {
+      throw new functions.https.HttpsError('not-found', '店舗が見つかりませんでした。')
+    }
+
+    const storeData = storeDoc.data() as StoreInfo
+    const staffList = storeData.staffList || []
+
+    const staffEntry = staffList.find(
+      (s) => s.email === userEmail && s.status === 'active'
+    )
+
+    if (!staffEntry) {
+      throw new functions.https.HttpsError(
+        'permission-denied',
+        'この店舗のスタッフではありません。'
+      )
+    }
+
+    // 대기열 컬렉션 참조
+    const waitingListRef = db.collection('stores').doc(storeId).collection('waitingList')
+
+    // 현재 대기 중인 고객 수 확인하여 queue number 결정
+    const activeCustomersSnapshot = await waitingListRef
+      .where('status', 'in', ['waiting', 'called'])
+      .orderBy('queueNumber', 'desc')
+      .limit(1)
+      .get()
+
+    let nextQueueNumber = 1
+    if (!activeCustomersSnapshot.empty) {
+      const lastCustomer = activeCustomersSnapshot.docs[0].data()
+      nextQueueNumber = (lastCustomer.queueNumber || 0) + 1
+    }
+
+    // 고유 ID 생성
+    const newCustomerRef = waitingListRef.doc()
+
+    // 고객 데이터 생성
+    const customerData = {
+      id: newCustomerRef.id,
+      displayName: displayName.trim(),
+      phoneNumber: phoneNumber.trim(),
+      partySize: Number(partySize),
+      isManualRegistration: true,
+      status: 'waiting',
+      queueNumber: nextQueueNumber,
+      createdAt: FieldValue.serverTimestamp(),
+    }
+
+    await newCustomerRef.set(customerData)
+
+    logger.info(`手動登録成功: ${displayName} (${phoneNumber}) - Queue #${nextQueueNumber}`)
+
+    return {
+      success: true,
+      message: 'お客様を登録しました。',
+      queueNumber: nextQueueNumber,
+    }
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    logger.error('手動登録失敗:', errorMessage)
+
+    if (error instanceof functions.https.HttpsError) {
+      throw error
+    }
+
+    throw new functions.https.HttpsError('internal', 'お客様の登録に失敗しました。')
+  }
+})
+
+// ========================================
 // スタッフの自己削除
 // ========================================
 export const removeStaffSelf = functions.https.onCall(async (data, context) => {

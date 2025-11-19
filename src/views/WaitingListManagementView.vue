@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useFirebase, useTimeFormat } from '../composables/useFirebase'
 import type { WaitingCustomer } from '../types'
 
 const route = useRoute()
-const { subscribeToWaitingList, callCustomer, cancelWaiting, completeEntry } = useFirebase()
+const router = useRouter()
+const { subscribeToWaitingList, callCustomer, cancelWaiting, completeEntry, registerManualCustomer } =
+  useFirebase()
 const { formatTimestamp } = useTimeFormat()
 
 const storeId = ref(route.params.storeId as string)
@@ -13,6 +15,13 @@ const waitingList = ref<WaitingCustomer[]>([])
 const isLoading = ref(true)
 const error = ref('')
 const processingCustomerId = ref<string | null>(null)
+const showManualRegistrationModal = ref(false)
+const manualRegistrationForm = ref({
+  displayName: '',
+  partySize: 1,
+  phoneNumber: '',
+})
+const isSubmittingManualRegistration = ref(false)
 
 let unsubscribe: (() => void) | null = null
 
@@ -114,6 +123,73 @@ const handleCancelWaiting = async (customer: WaitingCustomer) => {
   }
 }
 
+// 이력 페이지로 이동
+const goToCompletedHistory = () => {
+  router.push(`/store/${storeId.value}/completed-history`)
+}
+
+const goToCancelledHistory = () => {
+  router.push(`/store/${storeId.value}/cancelled-history`)
+}
+
+// 수동 등록 모달 열기/닫기
+const openManualRegistrationModal = () => {
+  showManualRegistrationModal.value = true
+  // 폼 초기화
+  manualRegistrationForm.value = {
+    displayName: '',
+    partySize: 1,
+    phoneNumber: '',
+  }
+}
+
+const closeManualRegistrationModal = () => {
+  showManualRegistrationModal.value = false
+}
+
+// 수동 고객 등록
+const handleManualRegistration = async () => {
+  const { displayName, partySize, phoneNumber } = manualRegistrationForm.value
+
+  if (!displayName.trim()) {
+    alert('お客様のお名前を入力してください。')
+    return
+  }
+
+  if (partySize < 1) {
+    alert('人数は1人以上を入力してください。')
+    return
+  }
+
+  if (!phoneNumber.trim()) {
+    alert('電話番号を入力してください。')
+    return
+  }
+
+  const confirm = window.confirm(
+    `以下の内容で登録しますか？\n\nお名前: ${displayName}\n人数: ${partySize}名\n電話番号: ${phoneNumber}`,
+  )
+
+  if (!confirm) return
+
+  isSubmittingManualRegistration.value = true
+
+  try {
+    await registerManualCustomer(storeId.value, {
+      displayName: displayName.trim(),
+      partySize,
+      phoneNumber: phoneNumber.trim(),
+    })
+    closeManualRegistrationModal()
+    alert('お客様を登録しました。')
+  } catch (err: any) {
+    console.error('수동 등록 실패:', err)
+    alert(err.message || 'お客様の登録に失敗しました。')
+  } finally {
+    isSubmittingManualRegistration.value = false
+  }
+}
+
 // 데이터 로드
 const loadData = () => {
   isLoading.value = true
@@ -145,6 +221,17 @@ onMounted(() => {
   <div class="waiting-list-container">
     <div class="header">
       <h1>順番待ち中のお客様リスト</h1>
+
+      <!-- 이력 및 수동 등록 버튼 -->
+      <div class="action-buttons">
+        <button @click="goToCompletedHistory" class="history-btn completed-btn">
+          来店完了履歴
+        </button>
+        <button @click="goToCancelledHistory" class="history-btn cancelled-btn">取消履歴</button>
+        <button @click="openManualRegistrationModal" class="manual-registration-btn">
+          ➕ お客様を追加
+        </button>
+      </div>
 
       <!-- 통계 -->
       <div class="stats">
@@ -300,6 +387,62 @@ onMounted(() => {
         </div>
       </div>
     </div>
+
+    <!-- 수동 등록 모달 -->
+    <div v-if="showManualRegistrationModal" class="modal-overlay" @click="closeManualRegistrationModal">
+      <div class="modal-content" @click.stop>
+        <h2>お客様を追加</h2>
+        <form @submit.prevent="handleManualRegistration">
+          <div class="form-group">
+            <label for="displayName">お名前 *</label>
+            <input
+              id="displayName"
+              v-model="manualRegistrationForm.displayName"
+              type="text"
+              placeholder="お客様のお名前"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="partySize">人数 *</label>
+            <input
+              id="partySize"
+              v-model.number="manualRegistrationForm.partySize"
+              type="number"
+              min="1"
+              placeholder="人数"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="phoneNumber">電話番号 *</label>
+            <input
+              id="phoneNumber"
+              v-model="manualRegistrationForm.phoneNumber"
+              type="tel"
+              placeholder="電話番号"
+              required
+            />
+          </div>
+
+          <div class="modal-actions">
+            <button
+              type="button"
+              @click="closeManualRegistrationModal"
+              class="cancel-modal-btn"
+              :disabled="isSubmittingManualRegistration"
+            >
+              キャンセル
+            </button>
+            <button type="submit" class="submit-btn" :disabled="isSubmittingManualRegistration">
+              {{ isSubmittingManualRegistration ? '登録中...' : '登録' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -321,6 +464,63 @@ h1 {
   font-size: 1.3rem;
   margin-bottom: 1rem;
   color: #333;
+}
+
+/* 액션 버튼들 */
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.history-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.history-btn.completed-btn {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.history-btn.completed-btn:active {
+  background-color: #bbdefb;
+}
+
+.history-btn.cancelled-btn {
+  background-color: #f5f5f5;
+  color: #757575;
+}
+
+.history-btn.cancelled-btn:active {
+  background-color: #e0e0e0;
+}
+
+.manual-registration-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.manual-registration-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
 }
 
 .stats {
@@ -603,6 +803,106 @@ h1 {
 .cancel-btn:active:not(:disabled) {
   background-color: #da190b;
   transform: scale(0.98);
+}
+
+/* 모달 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.modal-content {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.3rem;
+  color: #333;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.cancel-modal-btn,
+.submit-btn {
+  flex: 1;
+  padding: 0.875rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-modal-btn {
+  background-color: #f5f5f5;
+  color: #666;
+}
+
+.cancel-modal-btn:active:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.submit-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+.cancel-modal-btn:disabled,
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 /* モバイルファースト: すべてのデバイスで同じUIを表示 */
