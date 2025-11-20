@@ -8,7 +8,8 @@
 
     <!-- 認証メール送信完了メッセージ -->
     <div v-if="verificationSent" class="success-message">
-      <p>{{ email }}に認証メールを送信しました。</p>
+      <p style="font-weight: bold">{{ email }}</p>
+      <p>に認証メールを送信しました。</p>
       <p>メール内のリンクをクリックして、アカウントを有効化してください。</p>
       <button @click="backToLogin" class="back-to-login-button">ログインページに戻る</button>
     </div>
@@ -41,19 +42,18 @@
         </div>
         <div class="form-group">
           <label class="file-upload-label">
-            <input
-              type="file"
-              @change="handleFileSelect"
-              accept="image/*"
-              class="file-input"
-            />
+            <input type="file" @change="handleFileSelect" accept="image/*" class="file-input" />
             <span class="file-upload-button">
               {{ profileImage ? profileImage.name : 'プロフィール画像を選択（任意）' }}
             </span>
           </label>
           <!-- プロフィール画像プレビュー -->
           <div v-if="profileImagePreview" class="image-preview-container">
-            <img :src="profileImagePreview" alt="プロフィール画像プレビュー" class="image-preview" />
+            <img
+              :src="profileImagePreview"
+              alt="プロフィール画像プレビュー"
+              class="image-preview"
+            />
             <button @click="removeProfileImage" type="button" class="remove-image-button">
               ✕ 削除
             </button>
@@ -68,8 +68,9 @@
           {{ loading ? '登録中...' : '会員登録' }}
         </button>
         <p>
-          アカウントを登録済み
-          <button @click.prevent="isSignUp = false" href="#">ログイン</button>
+          <button @click.prevent="isSignUp = false" href="#">
+            登録済みのアカウントでログインする
+          </button>
         </p>
       </div>
       <div v-else>
@@ -77,7 +78,7 @@
           {{ loading ? 'ログイン中...' : 'ログイン' }}
         </button>
         <p>
-          新しいアカウントを作る　<button @click.prevent="isSignUp = true" href="#">会員登録</button>
+          <button @click.prevent="isSignUp = true" href="#">新しいアカウントを作る</button>
         </p>
         <p class="forgot-password-text">
           <button @click.prevent="showPasswordReset = true" class="forgot-password-link">
@@ -87,7 +88,11 @@
       </div>
 
       <!-- パスワードリセット画面 -->
-      <div v-if="showPasswordReset" class="password-reset-overlay" @click.self="showPasswordReset = false">
+      <div
+        v-if="showPasswordReset"
+        class="password-reset-overlay"
+        @click.self="showPasswordReset = false"
+      >
         <div class="password-reset-modal">
           <h3>パスワードをリセット</h3>
           <p class="reset-description">
@@ -174,12 +179,18 @@ const validatePassword = (password: string): { valid: boolean; message: string }
 
     // 昇順の連続 (abc, 123)
     if (char2 === char1 + 1 && char3 === char2 + 1) {
-      return { valid: false, message: 'パスワードに連続する文字列を使用できません。（例：abc、123）' }
+      return {
+        valid: false,
+        message: 'パスワードに連続する文字列を使用できません。（例：abc、123）',
+      }
     }
 
     // 降順の連続 (cba, 321)
     if (char2 === char1 - 1 && char3 === char2 - 1) {
-      return { valid: false, message: 'パスワードに連続する文字列を使用できません。（例：cba、321）' }
+      return {
+        valid: false,
+        message: 'パスワードに連続する文字列を使用できません。（例：cba、321）',
+      }
     }
   }
 
@@ -273,20 +284,13 @@ const handleSignUp = async () => {
     }
 
     // ユーザー作成
-    const userCredential = await createUserWithEmailAndPassword(
-      auth,
-      email.value,
-      password.value
-    )
+    const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value)
     const user = userCredential.user
 
     // プロフィール画像をアップロード（選択されている場合）
     let profileImageUrl = ''
     if (profileImage.value) {
-      const imageRef = storageRef(
-        storage,
-        `profile_images/${user.uid}/${profileImage.value.name}`
-      )
+      const imageRef = storageRef(storage, `profile_images/${user.uid}/${profileImage.value.name}`)
       await uploadBytes(imageRef, profileImage.value)
       profileImageUrl = await getDownloadURL(imageRef)
     }
@@ -333,7 +337,7 @@ const handleSignIn = async () => {
     if (!user.emailVerified) {
       // 認証されていない場合
       const resend = confirm(
-        `${email.value}に認証メールを再送信しますか？\n\nメールを確認して、認証リンクをクリックしてください。`
+        `このアカウントはまだ有効化されていません。\nメールを確認して、認証リンクをクリックしてください。\n\n${email.value}に認証メールを再送信しますか？`,
       )
 
       if (resend) {
@@ -424,7 +428,6 @@ const getErrorMessage = (errorCode: string): string => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 40px;
 }
 
 .app-logo {
@@ -536,6 +539,7 @@ const getErrorMessage = (errorCode: string): string => {
   border-radius: 4px;
   margin-bottom: 20px;
   text-align: center;
+  font-size: smaller;
 }
 
 .success-message {
@@ -613,7 +617,6 @@ p button:hover {
 .forgot-password-link {
   background: none;
   border: none;
-  color: #666;
   cursor: pointer;
   text-decoration: underline;
   font-size: 13px;

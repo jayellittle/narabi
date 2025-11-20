@@ -62,6 +62,18 @@ const router = createRouter({
           component: () => import('../views/StaffManagementView.vue'),
           meta: { requiresAuth: true },
         },
+        {
+          path: 'completed-history',
+          name: 'CompletedHistory',
+          component: () => import('../views/CompletedHistoryView.vue'),
+          meta: { requiresAuth: true },
+        },
+        {
+          path: 'cancelled-history',
+          name: 'CancelledHistory',
+          component: () => import('../views/CancelledHistoryView.vue'),
+          meta: { requiresAuth: true },
+        },
       ],
     },
     {

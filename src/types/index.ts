@@ -26,9 +26,12 @@ export interface StaffMember {
 
 export interface WaitingCustomer {
   id: string
-  lineUserId: string
+  lineUserId?: string // 수동 등록 시에는 없을 수 있음
   displayName: string
   pictureUrl?: string
+  phoneNumber?: string // 수동 등록 시 전화번호
+  partySize?: number // 수동 등록 시 고객 수
+  isManualRegistration?: boolean // 수동 등록 여부
   status: 'waiting' | 'called' | 'cancelled' | 'completed'
   queueNumber: number
   createdAt: any

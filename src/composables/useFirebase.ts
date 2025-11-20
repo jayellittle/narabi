@@ -152,6 +152,50 @@ export function useFirebase() {
   }
 
   /**
+   * 来店完了履歴 실시간 구독
+   */
+  const subscribeToCompletedHistory = (
+    storeId: string,
+    callback: (customers: WaitingCustomer[]) => void,
+  ) => {
+    const q = query(
+      collection(db, 'stores', storeId, 'waitingList'),
+      where('status', '==', 'completed'),
+      orderBy('completedAt', 'desc'),
+    )
+
+    return onSnapshot(q, (snapshot) => {
+      const customers = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as WaitingCustomer[]
+      callback(customers)
+    })
+  }
+
+  /**
+   * 取消履歴 실시간 구독
+   */
+  const subscribeToCancelledHistory = (
+    storeId: string,
+    callback: (customers: WaitingCustomer[]) => void,
+  ) => {
+    const q = query(
+      collection(db, 'stores', storeId, 'waitingList'),
+      where('status', '==', 'cancelled'),
+      orderBy('cancelledAt', 'desc'),
+    )
+
+    return onSnapshot(q, (snapshot) => {
+      const customers = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as WaitingCustomer[]
+      callback(customers)
+    })
+  }
+
+  /**
    * 고객 호출
    */
   const callCustomer = async (storeId: string, customerId: string) => {
@@ -191,6 +235,21 @@ export function useFirebase() {
     return await registerFunc({ code, storeId })
   }
 
+  /**
+   * 수동 고객 등록 (스태프용)
+   */
+  const registerManualCustomer = async (
+    storeId: string,
+    customerData: {
+      displayName: string
+      partySize: number
+      phoneNumber: string
+    },
+  ) => {
+    const registerFunc = httpsCallable(functions, 'registerManualCustomer')
+    return await registerFunc({ storeId, ...customerData })
+  }
+
   return {
     // 매장
     requestStoreRegistration,
@@ -208,11 +267,14 @@ export function useFirebase() {
 
     // 대기열
     subscribeToWaitingList,
+    subscribeToCompletedHistory,
+    subscribeToCancelledHistory,
     callCustomer,
     cancelWaiting,
     completeEntry,
     getEstimatedWaitTime,
     registerToWaitlist,
+    registerManualCustomer,
   }
 }
 
