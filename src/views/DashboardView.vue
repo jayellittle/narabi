@@ -1,6 +1,5 @@
 <template>
   <div class="dashboard-container">
-    <!-- PC: 왼쪽 프로필 / 모바일: 상단 프로필 -->
     <aside class="profile-sidebar">
       <!-- 로딩 -->
       <div v-if="isLoading || isLoadingProfile" class="loading">読み込み中...</div>
@@ -555,8 +554,8 @@ watch(
 
 .profile-header {
   position: absolute;
-  top: 0.75rem;
-  right: 1rem;
+  top: -1rem;
+  right: 0rem;
   padding: 0;
   border: none;
   margin: 0;
@@ -569,13 +568,13 @@ watch(
 
 .logout-btn {
   position: static;
-  padding: 0.125rem 0.25rem;
+  padding: 0.25rem 0.5rem;
   background-color: #f44336;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.5rem;
+  font-size: 0.75rem;
   transition: background-color 0.3s;
 }
 
@@ -720,7 +719,7 @@ watch(
 .no-stores p {
   color: #999;
   margin-bottom: 1.5rem;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 }
 
 .primary-btn {

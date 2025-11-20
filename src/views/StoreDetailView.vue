@@ -58,7 +58,13 @@
             ⬅️
           </button>
           <div class="mobile-user-info">
-            <img :src="currentProfileImage" alt="プロフィール画像" class="mobile-user-avatar" />
+            <img
+              v-if="currentProfileImage && currentProfileImage !== '/default-avatar.png'"
+              :src="currentProfileImage"
+              alt="プロフィール画像"
+              class="mobile-user-avatar"
+            />
+            <div v-else class="mobile-user-avatar-placeholder">👤</div>
             <span class="mobile-user-name">{{ currentDisplayName }}</span>
           </div>
         </div>
@@ -489,6 +495,18 @@ const goToMenu = () => {
   object-fit: cover;
   flex-shrink: 0;
   border: 2px solid #e0e0e0;
+}
+
+.mobile-user-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
 }
 
 .mobile-user-name {

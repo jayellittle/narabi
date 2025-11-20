@@ -278,7 +278,7 @@ onMounted(() => {
     </div>
 
     <div v-else class="customer-list">
-      <div v-for="(customer, index) in filteredList" :key="customer.id" class="customer-card">
+      <div v-for="customer in filteredList" :key="customer.id" class="customer-card">
         <!-- 순번 -->
         <div class="queue-number">
           <div class="number">{{ customer.queueNumber }}</div>
@@ -287,8 +287,26 @@ onMounted(() => {
 
         <!-- 액션 버튼 (모바일에서만 여기에 표시) -->
         <div class="customer-actions mobile-actions">
-          <!-- 대기 중 -->
-          <template v-if="customer.status === 'waiting'">
+          <!-- 수동 등록 고객 -->
+          <template v-if="customer.isManualRegistration">
+            <button
+              @click="handleCompleteEntry(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn complete-btn"
+            >
+              ✅ 来店完了
+            </button>
+            <button
+              @click="handleCancelWaiting(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn cancel-btn"
+            >
+              ❌ 取消
+            </button>
+          </template>
+
+          <!-- LINE 등록 고객 - 대기 중 -->
+          <template v-else-if="customer.status === 'waiting'">
             <button
               @click="handleCallCustomer(customer)"
               :disabled="processingCustomerId === customer.id"
@@ -305,7 +323,7 @@ onMounted(() => {
             </button>
           </template>
 
-          <!-- 호출됨 -->
+          <!-- LINE 등록 고객 - 호출됨 -->
           <template v-else-if="customer.status === 'called'">
             <button
               @click="handleCompleteEntry(customer)"
@@ -327,10 +345,12 @@ onMounted(() => {
         <!-- 고객 정보 -->
         <div class="customer-info">
           <img
-            :src="customer.pictureUrl || '/default-avatar.png'"
+            v-if="customer.pictureUrl"
+            :src="customer.pictureUrl"
             :alt="customer.displayName"
             class="customer-avatar"
           />
+          <div v-else class="customer-avatar-placeholder">👤</div>
           <div class="customer-details">
             <div class="customer-name-row">
               <h3 class="customer-name">{{ customer.displayName }}</h3>
@@ -349,8 +369,26 @@ onMounted(() => {
 
         <!-- 액션 버튼 (PC에서만 여기에 표시) -->
         <div class="customer-actions desktop-actions">
-          <!-- 대기 중 -->
-          <template v-if="customer.status === 'waiting'">
+          <!-- 수동 등록 고객 -->
+          <template v-if="customer.isManualRegistration">
+            <button
+              @click="handleCompleteEntry(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn complete-btn"
+            >
+              ✅ 来店完了
+            </button>
+            <button
+              @click="handleCancelWaiting(customer)"
+              :disabled="processingCustomerId === customer.id"
+              class="action-btn cancel-btn"
+            >
+              ❌ 取消
+            </button>
+          </template>
+
+          <!-- LINE 등록 고객 - 대기 중 -->
+          <template v-else-if="customer.status === 'waiting'">
             <button
               @click="handleCallCustomer(customer)"
               :disabled="processingCustomerId === customer.id"
@@ -367,7 +405,7 @@ onMounted(() => {
             </button>
           </template>
 
-          <!-- 호출됨 -->
+          <!-- LINE 등록 고객 - 호출됨 -->
           <template v-else-if="customer.status === 'called'">
             <button
               @click="handleCompleteEntry(customer)"
@@ -690,6 +728,18 @@ h1 {
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #e0e0e0;
+  flex-shrink: 0;
+}
+
+.customer-avatar-placeholder {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
   flex-shrink: 0;
 }
 

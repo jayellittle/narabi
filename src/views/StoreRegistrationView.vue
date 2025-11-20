@@ -89,12 +89,10 @@ const loadStores = async () => {
     const pendingRequestsQuery = query(
       collection(db, 'storeJoinRequests'),
       where('userId', '==', user.uid),
-      where('status', '==', 'pending')
+      where('status', '==', 'pending'),
     )
     const pendingRequestsSnapshot = await getDocs(pendingRequestsQuery)
-    const pendingStoreIds = new Set(
-      pendingRequestsSnapshot.docs.map(doc => doc.data().storeId)
-    )
+    const pendingStoreIds = new Set(pendingRequestsSnapshot.docs.map((doc) => doc.data().storeId))
 
     stores.value = snapshot.docs.map((doc) => {
       const data = doc.data()
@@ -102,7 +100,7 @@ const loadStores = async () => {
 
       // 이미 스태프 목록에 active 상태로 등록되어 있는지 확인
       const isAlreadyMember = staffList.some(
-        (staff: any) => staff.email === user.email && staff.status === 'active'
+        (staff: any) => staff.email === user.email && staff.status === 'active',
       )
 
       return {
@@ -149,7 +147,8 @@ const handleImageSelect = (event: Event) => {
       return
     }
 
-    if (file.size > 5 * 1024 * 1024) { // 5MB 제한
+    if (file.size > 5 * 1024 * 1024) {
+      // 5MB 제한
       alert('ファイルサイズは5MB以下にしてください。')
       return
     }
@@ -486,7 +485,6 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
               </div>
             </label>
           </div>
-          <p class="form-hint">店舗の写真をアップロードできます（最大5MB）</p>
         </div>
 
         <button type="submit" :disabled="isSubmitting" class="submit-button">
@@ -528,7 +526,9 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="closeRequestModal" class="cancel-button">キャンセル</button>
+            <button type="button" @click="closeRequestModal" class="cancel-button">
+              キャンセル
+            </button>
             <button type="submit" :disabled="isSubmitting" class="submit-button">
               {{ isSubmitting ? '送信中...' : 'リクエストを送る' }}
             </button>
@@ -544,13 +544,12 @@ const handleModeChange = (newMode: 'existing' | 'new') => {
 .store-registration-container {
   max-width: 100%;
   margin: 0 auto;
-  padding: 1.5rem 1rem;
+  padding: 1rem 1rem;
   box-sizing: border-box;
 }
 
 h1 {
   font-size: 1.5rem;
-  margin-bottom: 1.5rem;
   color: #333;
 }
 
@@ -562,7 +561,7 @@ h1 {
 }
 
 .tabs button {
-  padding: 0.625rem 0.75rem;
+  padding: 0.35rem 0.75rem;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
@@ -679,13 +678,13 @@ h1 {
 
 /* 새 매장 섹션 */
 .new-store-section {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 .store-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .form-group {
@@ -694,7 +693,7 @@ h1 {
 }
 
 .form-group label {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-weight: 500;
   color: #333;
 }
@@ -705,7 +704,7 @@ h1 {
 
 .form-group input,
 .form-group textarea {
-  padding: 0.75rem;
+  padding: 0.5rem;
   font-size: 1rem;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -758,11 +757,6 @@ h1 {
 .submit-button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
-}
-
-/* 이미지 업로드 */
-.image-upload-container {
-  margin-top: 0.5rem;
 }
 
 .image-upload-label {
