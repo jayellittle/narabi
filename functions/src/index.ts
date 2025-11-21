@@ -46,7 +46,7 @@ interface StoreInfo {
 export const registerWaitlist = functions
   .runWith(runtimeOptsWithSecrets)
   .https.onCall(async (data) => {
-    const { code, storeId } = data
+    const { code, storeId, partySize, customName, phoneNumber } = data
 
     const LINE_LOGIN_CHANNEL_ID = process.env.LINE_LOGIN_CHANNEL_ID
     const LINE_LOGIN_CHANNEL_SECRET = process.env.LINE_LOGIN_CHANNEL_SECRET
@@ -89,10 +89,15 @@ export const registerWaitlist = functions
         throw new Error(JSON.stringify(lineProfile))
       }
 
+      // customName이 있으면 사용, 없으면 LINE 프로필 이름 사용
+      const finalDisplayName = customName?.trim() || lineProfile.displayName
+
       await db.collection('stores').doc(storeId).collection('waitingList').add({
         lineUserId: lineProfile.userId,
-        displayName: lineProfile.displayName,
+        displayName: finalDisplayName,
         pictureUrl: lineProfile.pictureUrl,
+        partySize: partySize || 1,
+        phoneNumber: phoneNumber || '',
         status: 'waiting',
         createdAt: FieldValue.serverTimestamp(),
       })
