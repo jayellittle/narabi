@@ -5,12 +5,12 @@ import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
 import { getStorage, connectStorageEmulator } from 'firebase/storage'
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyBhOoE7W3RVs3VkCfLYLxVF4EolnlD_0rE',
-  authDomain: 'narabi-a8765.firebaseapp.com',
-  projectId: 'narabi-a8765',
-  storageBucket: 'narabi-a8765.firebasestorage.app',
-  messagingSenderId: '654813606842',
-  appId: '1:654813606842:web:8e5f7e5a7e3d0b8c5e3f7e',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
 // Firebase 초기화
