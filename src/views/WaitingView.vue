@@ -53,7 +53,8 @@ const loginWithLine = () => {
   localStorage.setItem('storeIdForLogin', currentStoreId.value)
 
   const LINE_LOGIN_CHANNEL_ID = import.meta.env.VITE_LINE_LOGIN_CHANNEL_ID
-  const REDIRECT_URI = `${import.meta.env.VITE_APP_URL}/wait`
+  const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
+  const REDIRECT_URI = `${baseUrl}/wait`
   const STATE = '12345abcde' // 任意値
 
   const lineLoginUrl = new URL('https://access.line.me/oauth2/v2.1/authorize')
