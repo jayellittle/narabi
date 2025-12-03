@@ -1,8 +1,8 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth } from 'firebase/auth'
-import { getFirestore } from 'firebase/firestore'
-import { getFunctions } from 'firebase/functions'
-import { getStorage } from 'firebase/storage'
+import { getAuth, connectAuthEmulator } from 'firebase/auth'
+import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
+import { getStorage, connectStorageEmulator } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -22,12 +22,25 @@ console.log('===========================')
 
 // Firebase 초기화
 const app = initializeApp(firebaseConfig)
+const auth = getAuth(app)
+const db = getFirestore(app)
+const storage = getStorage(app)
+const functions = getFunctions(app)
 
-// 서비스 초기化
-export const auth = getAuth(app)
-export const db = getFirestore(app)
-export const functions = getFunctions(app)
-export const storage = getStorage(app)
+const isCI = import.meta.env.VITE_IS_CI_ENV === 'true'
+
+if (!isCI && location.hostname === 'localhost') {
+  console.log('🔧 Localhost detected. Connecting to Emulators...')
+  connectFirestoreEmulator(db, 'localhost', 8080)
+  connectAuthEmulator(auth, 'http://localhost:9099')
+  connectStorageEmulator(storage, 'localhost', 9199)
+  connectFunctionsEmulator(functions, 'localhost', 5001)
+} else {
+  console.log('🚀 Production mode or CI Environment detected. Skipping Emulators.')
+}
+
+// 서비스 초기화
+export { auth, db, storage, functions }
 
 // 🔥 Emulator 연결 (로컬 개발 시)
 // if (!import.meta.env.CI && location.hostname === 'localhost') {

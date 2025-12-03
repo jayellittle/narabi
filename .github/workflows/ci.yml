@@ -36,6 +36,8 @@ jobs:
         # --pool=forks 옵션으로 CI 멈춤 현상 방지
         run: npm run test -- --run --pool=forks --reporter=verbose
         env:
+          VITE_IS_CI_ENV: 'true'
+
           # GitHub Secrets에서 설정한 환경 변수 주입 (필수)
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
