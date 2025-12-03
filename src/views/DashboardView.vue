@@ -246,11 +246,7 @@ const profileImagePreview = ref<string | null>(null)
 const profileImageToDelete = ref(false)
 const isUpdatingProfile = ref(false)
 
-// 현재 선택된 매장
-const selectedStore = computed(() => {
-  if (!selectedStoreId.value) return null
-  return myStores.value.find((s) => s.id === selectedStoreId.value) || null
-})
+// 현재 선택된 매장 (computed removed as it was unused)
 
 // 승인된 매장만 필터링
 const approvedStores = computed(() => {
@@ -334,7 +330,7 @@ const loadStores = async () => {
 
       // staffList에서 내 이메일이 있는지 확인 (active 또는 pending)
       const myStaffEntry = staffList.find(
-        (staff: any) =>
+        (staff: { email: string; status: string }) =>
           staff.email === user.email && (staff.status === 'active' || staff.status === 'pending'),
       )
 
@@ -467,7 +463,7 @@ const handleProfileUpdate = async () => {
   isUpdatingProfile.value = true
 
   try {
-    const updates: any = {
+    const updates: { displayName: string; profileImageUrl?: string } = {
       displayName: editableProfile.value.displayName,
     }
 

@@ -429,8 +429,9 @@ export const inviteStaff = functions
       // 이메일로 사용자가 등록되어 있는지 확인
       try {
         await admin.auth().getUserByEmail(email)
-      } catch (error: any) {
-        if (error.code === 'auth/user-not-found') {
+      } catch (error: unknown) {
+        const err = error as { code?: string }
+        if (err.code === 'auth/user-not-found') {
           throw new functions.https.HttpsError(
             'not-found',
             'このメールアドレスは登録されていません。',
@@ -629,7 +630,8 @@ export const updateStaffDisplayName = functions
         }
       } else {
         // displayNameを削除
-        const { displayName: _, ...staffWithoutDisplayName } = updatedStaffList[staffIndex]
+        const staffWithoutDisplayName = { ...updatedStaffList[staffIndex] }
+        delete (staffWithoutDisplayName as Partial<StaffMember>).displayName
         updatedStaffList[staffIndex] = staffWithoutDisplayName as StaffMember
       }
 

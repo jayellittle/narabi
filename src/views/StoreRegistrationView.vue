@@ -100,7 +100,8 @@ const loadStores = async () => {
 
       // 이미 스태프 목록에 active 상태로 등록되어 있는지 확인
       const isAlreadyMember = staffList.some(
-        (staff: any) => staff.email === user.email && staff.status === 'active',
+        (staff: { email: string; status: string }) =>
+          staff.email === user.email && staff.status === 'active',
       )
 
       return {
@@ -213,7 +214,8 @@ const submitJoinRequest = async () => {
     if (storeDoc.exists()) {
       const staffList = storeDoc.data().staffList || []
       const isAlreadyStaff = staffList.some(
-        (staff: any) => staff.email === user.email && staff.status === 'active',
+        (staff: { email: string; status: string }) =>
+          staff.email === user.email && staff.status === 'active',
       )
 
       if (isAlreadyStaff) {
@@ -224,7 +226,8 @@ const submitJoinRequest = async () => {
       }
 
       const isPending = staffList.some(
-        (staff: any) => staff.email === user.email && staff.status === 'pending',
+        (staff: { email: string; status: string }) =>
+          staff.email === user.email && staff.status === 'pending',
       )
 
       if (isPending) {
@@ -286,12 +289,13 @@ const submitJoinRequest = async () => {
     alert('参加リクエストを送信しました。承認をお待ちください。')
     closeRequestModal()
     router.push('/dashboard')
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('참여 요청 실패:', error)
-    errorMessage.value = error.message || '参加リクエストに失敗しました。'
+    const message = error instanceof Error ? error.message : '参加リクエストに失敗しました。'
+    errorMessage.value = message
 
     // 에러가 발생해도 대시보드로 돌아가지 않고 여기에 남음
-    alert(`エラーが発生しました: ${error.message}`)
+    alert(`エラーが発生しました: ${message}`)
   } finally {
     isSubmitting.value = false
   }
@@ -353,9 +357,10 @@ const handleCreateStore = async () => {
 
     alert('店舗を作成しました！')
     router.push('/dashboard')
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('매장 등록 실패:', error)
-    errorMessage.value = error.message || '店舗登録に失敗しました。'
+    const message = error instanceof Error ? error.message : '店舗登録に失敗しました。'
+    errorMessage.value = message
   } finally {
     isSubmitting.value = false
   }

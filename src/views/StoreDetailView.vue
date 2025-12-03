@@ -99,7 +99,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getFirestore, doc, getDoc } from 'firebase/firestore'
+import { getFirestore, doc, getDoc, type Timestamp } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 
 interface StaffMember {
@@ -107,7 +107,7 @@ interface StaffMember {
   userId?: string
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
-  invitedAt: any
+  invitedAt: Timestamp | Date | { seconds: number; nanoseconds: number }
   staffImageUrl?: string
   displayName?: string
 }
@@ -121,7 +121,7 @@ interface Store {
   imageUrl?: string
   ownerId: string
   staffList?: StaffMember[]
-  createdAt: any
+  createdAt: Timestamp | Date | { seconds: number; nanoseconds: number }
 }
 
 interface UserProfile {
