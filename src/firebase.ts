@@ -13,6 +13,13 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
+// 🔍 디버깅용 로그 (CI 로그에서 확인용)
+console.log('=== FIREBASE DEBUG INFO ===')
+console.log('Is CI?', import.meta.env.CI)
+console.log('Hostname:', location.hostname)
+console.log('API Key Exists?', !!import.meta.env.VITE_FIREBASE_API_KEY)
+console.log('===========================')
+
 // Firebase 초기화
 const app = initializeApp(firebaseConfig)
 
@@ -23,20 +30,20 @@ export const functions = getFunctions(app)
 export const storage = getStorage(app)
 
 // 🔥 Emulator 연결 (로컬 개발 시)
-if (!import.meta.env.CI && location.hostname === 'localhost') {
-  console.log('🔧 Firebase Emulator에 연결합니다...')
+// if (!import.meta.env.CI && location.hostname === 'localhost') {
+//   console.log('🔧 Firebase Emulator에 연결합니다...')
 
-  // Auth Emulator
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
+//   // Auth Emulator
+//   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true })
 
-  // Firestore Emulator
-  connectFirestoreEmulator(db, '127.0.0.1', 8080)
+//   // Firestore Emulator
+//   connectFirestoreEmulator(db, '127.0.0.1', 8080)
 
-  // Functions Emulator
-  connectFunctionsEmulator(functions, '127.0.0.1', 5001)
+//   // Functions Emulator
+//   connectFunctionsEmulator(functions, '127.0.0.1', 5001)
 
-  // Storage Emulator
-  connectStorageEmulator(storage, '127.0.0.1', 9199)
-}
+//   // Storage Emulator
+//   connectStorageEmulator(storage, '127.0.0.1', 9199)
+// }
 
 export default app
