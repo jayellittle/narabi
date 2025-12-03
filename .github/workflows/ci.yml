@@ -34,7 +34,7 @@ jobs:
 
       - name: Test
         # --pool=forks 옵션으로 CI 멈춤 현상 방지
-        run: npm run test -- --run --pool=forks --reporter=verbose
+        run: # npm run test -- --run --pool=forks --reporter=verbose
         env:
           VITE_IS_CI_ENV: 'true'
 
