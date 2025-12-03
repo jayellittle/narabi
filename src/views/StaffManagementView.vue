@@ -14,7 +14,7 @@ import {
   arrayUnion,
   getDoc,
 } from 'firebase/firestore'
-import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage'
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import type { Store, StaffMember } from '../types'
 
@@ -24,7 +24,7 @@ const auth = getAuth()
 const db = getFirestore()
 const storage = getStorage()
 const functions = getFunctions()
-const { getStore, inviteStaff, respondToInvitation, updateStaffDisplayName } = useFirebase()
+const { getStore, inviteStaff, respondToInvitation } = useFirebase()
 const { formatTimestamp } = useTimeFormat()
 
 const storeId = ref(route.params.storeId as string)
@@ -40,7 +40,7 @@ interface JoinRequest {
   userEmail: string
   message?: string
   status: 'pending' | 'approved' | 'rejected'
-  createdAt: any
+  createdAt: { seconds: number; nanoseconds: number } | Date
 }
 
 const joinRequests = ref<JoinRequest[]>([])
@@ -83,9 +83,7 @@ const activeStaff = computed(() => {
   return store.value?.staffList.filter((s) => s.status === 'active') || []
 })
 
-const rejectedStaff = computed(() => {
-  return store.value?.staffList.filter((s) => s.status === 'rejected') || []
-})
+// rejectedStaff computed property removed as it was unused
 
 // 대기 중인 참여 요청
 const pendingJoinRequests = computed(() => {
@@ -99,17 +97,13 @@ const isOwner = computed(() => {
 
 // 현재 사용자가 pending 상태인지 확인
 const isCurrentUserPending = computed(() => {
-  const myStaffEntry = store.value?.staffList.find(
-    (s) => s.email === currentUserEmail.value
-  )
+  const myStaffEntry = store.value?.staffList.find((s) => s.email === currentUserEmail.value)
   return myStaffEntry?.status === 'pending'
 })
 
 // 현재 사용자가 active 상태인지 확인
 const isCurrentUserActive = computed(() => {
-  const myStaffEntry = store.value?.staffList.find(
-    (s) => s.email === currentUserEmail.value
-  )
+  const myStaffEntry = store.value?.staffList.find((s) => s.email === currentUserEmail.value)
   return myStaffEntry?.status === 'active' || isOwner.value
 })
 
@@ -183,7 +177,7 @@ const loadStore = async () => {
           }
 
           return staff
-        })
+        }),
       )
       storeData.staffList = staffListWithUserInfo
     }
@@ -201,7 +195,12 @@ const loadStore = async () => {
 }
 
 // 참여 요청 승인/거절
-const handleJoinRequest = async (requestId: string, approved: boolean, userEmail: string, displayName?: string) => {
+const handleJoinRequest = async (
+  requestId: string,
+  approved: boolean,
+  userEmail: string,
+  displayName?: string,
+) => {
   try {
     const requestRef = doc(db, 'storeJoinRequests', requestId)
     const storeRef = doc(db, 'stores', storeId.value)
@@ -233,9 +232,10 @@ const handleJoinRequest = async (requestId: string, approved: boolean, userEmail
 
     // 데이터 새로고침
     await loadStore()
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('참여 요청 처리 실패:', err)
-    alert(err.message || 'リクエストの処理に失敗しました。')
+    const message = err instanceof Error ? err.message : 'リクエストの処理に失敗しました。'
+    alert(message)
   }
 }
 
@@ -266,14 +266,15 @@ const handleInviteStaff = async () => {
 
     // 매장 정보 새로고침
     await loadStore()
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('초대 실패:', err)
 
     // Firebase Functions 에러 메시지 추출
     let errorMessage = '招待に失敗しました。'
 
-    if (err.code) {
-      switch (err.code) {
+    if (typeof err === 'object' && err !== null && 'code' in err) {
+      const errorWithCode = err as { code: string; message?: string }
+      switch (errorWithCode.code) {
         case 'unauthenticated':
           errorMessage = 'ログインが必要です。'
           break
@@ -286,7 +287,7 @@ const handleInviteStaff = async () => {
         case 'already-exists':
           // 이미 초대된 사용자와 이미 소속된 스태프를 구분
           const staffList = store.value?.staffList || []
-          const existingStaff = staffList.find(s => s.email === inviteForm.value.email)
+          const existingStaff = staffList.find((s) => s.email === inviteForm.value.email)
           if (existingStaff && existingStaff.status === 'active') {
             errorMessage = 'このメールアドレスは既にこの店舗に所属しています。'
           } else if (existingStaff && existingStaff.status === 'pending') {
@@ -299,9 +300,9 @@ const handleInviteStaff = async () => {
           errorMessage = 'メールアドレスが無効です。'
           break
         default:
-          errorMessage = err.message || '招待に失敗しました。'
+          errorMessage = errorWithCode.message || '招待に失敗しました。'
       }
-    } else if (err.message) {
+    } else if (err instanceof Error) {
       errorMessage = err.message
     }
 
@@ -330,7 +331,7 @@ const handleRemoveStaff = async (staffEmail: string) => {
 
     if (storeDoc.exists()) {
       const staffList = storeDoc.data().staffList || []
-      const updatedStaffList = staffList.filter((staff: any) => staff.email !== staffEmail)
+      const updatedStaffList = staffList.filter((staff: StaffMember) => staff.email !== staffEmail)
 
       await updateDoc(storeRef, {
         staffList: updatedStaffList,
@@ -339,9 +340,10 @@ const handleRemoveStaff = async (staffEmail: string) => {
       alert('スタッフを削除しました。')
       await loadStore()
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('스태프 제거 실패:', err)
-    alert(err.message || 'スタッフの削除に失敗しました。')
+    const message = err instanceof Error ? err.message : 'スタッフの削除に失敗しました。'
+    alert(message)
   }
 }
 
@@ -364,9 +366,10 @@ const handleAcceptInvitation = async () => {
 
     // Firestoreの更新を確実に反映するため、完全なページリロードを行う
     window.location.href = `/store/${storeId.value}`
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('初대 승인 실패:', err)
-    alert(err.message || '招待の承認に失敗しました。')
+    const message = err instanceof Error ? err.message : '招待の承認に失敗しました。'
+    alert(message)
   } finally {
     isAcceptingInvitation.value = false
   }
@@ -383,9 +386,10 @@ const handleRejectInvitation = async () => {
 
     alert('招待を拒否しました。')
     router.push('/dashboard')
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('초대 거절 실패:', err)
-    alert(err.message || '招待の拒否に失敗しました。')
+    const message = err instanceof Error ? err.message : '招待の拒否に失敗しました。'
+    alert(message)
   }
 }
 
@@ -400,9 +404,7 @@ const handleRespondToInvitation = async (accepted: boolean) => {
 
 // 탈퇴 핸들러
 const handleLeaveStore = async () => {
-  const myStaffEntry = store.value?.staffList.find(
-    (s) => s.email === currentUserEmail.value
-  )
+  const myStaffEntry = store.value?.staffList.find((s) => s.email === currentUserEmail.value)
 
   if (!myStaffEntry) return
 
@@ -423,9 +425,10 @@ const handleLeaveStore = async () => {
 
     alert('退店しました。')
     router.push('/dashboard')
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('탈퇴 실패:', err)
-    alert(err.message || '退店に失敗しました。')
+    const message = err instanceof Error ? err.message : '退店に失敗しました。'
+    alert(message)
   }
 }
 
@@ -483,9 +486,7 @@ const uploadStaffImage = async (): Promise<string | null> => {
 
 // 표시명 편집 모달 열기
 const openDisplayNameModal = () => {
-  const myStaffEntry = store.value?.staffList.find(
-    (s) => s.email === currentUserEmail.value
-  )
+  const myStaffEntry = store.value?.staffList.find((s) => s.email === currentUserEmail.value)
   displayNameForm.value.displayName = myStaffEntry?.displayName || ''
   staffImagePreview.value = myStaffEntry?.staffImageUrl || null
   staffImageFile.value = null
@@ -510,11 +511,11 @@ const handleUpdateDisplayName = async () => {
 
     if (storeDoc.exists()) {
       const staffList = storeDoc.data().staffList || []
-      const updatedStaffList = staffList.map((staff: any) => {
+      const updatedStaffList = staffList.map((staff: StaffMember) => {
         if (staff.email === currentUserEmail.value) {
-          const updates: any = {
+          const updates: StaffMember = {
             ...staff,
-            displayName: displayNameForm.value.displayName.trim() || null,
+            displayName: displayNameForm.value.displayName.trim() || undefined,
           }
           // 이미지 삭제
           if (staffImageToDelete.value && !staffImageFile.value) {
@@ -539,9 +540,10 @@ const handleUpdateDisplayName = async () => {
       staffImagePreview.value = null
       await loadStore()
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('표시명 업데이트 실패:', err)
-    alert(err.message || '表示名の更新に失敗しました。')
+    const message = err instanceof Error ? err.message : '表示名の更新に失敗しました。'
+    alert(message)
   } finally {
     isUpdatingDisplayName.value = false
   }
@@ -563,7 +565,11 @@ onMounted(() => {
     <div class="header">
       <h1>スタッフ管理</h1>
       <div class="header-buttons">
-        <button v-if="isCurrentUserActive" @click="openDisplayNameModal" class="display-name-button">
+        <button
+          v-if="isCurrentUserActive"
+          @click="openDisplayNameModal"
+          class="display-name-button"
+        >
           ✏️ 表示名編集
         </button>
         <button v-if="isOwner" @click="showInviteModal = true" class="invite-button">
@@ -587,7 +593,11 @@ onMounted(() => {
         <section class="staff-section pending">
           <h2>招待承認</h2>
           <div class="staff-list">
-            <div v-for="staff in pendingStaff.filter(s => s.email === currentUserEmail)" :key="staff.email" class="staff-card">
+            <div
+              v-for="staff in pendingStaff.filter((s) => s.email === currentUserEmail)"
+              :key="staff.email"
+              class="staff-card"
+            >
               <div class="staff-info">
                 <div class="staff-icon">👤</div>
                 <div class="staff-details">
@@ -621,7 +631,10 @@ onMounted(() => {
       <!-- active 사용자인 경우: 전체 스태프 목록 표시 -->
       <template v-else>
         <!-- 참여 요청 (storeJoinRequests 컬렉션에서) -->
-        <section v-if="isOwner && pendingJoinRequests.length > 0" class="staff-section join-requests">
+        <section
+          v-if="isOwner && pendingJoinRequests.length > 0"
+          class="staff-section join-requests"
+        >
           <h2>参加リクエスト ({{ pendingJoinRequests.length }})</h2>
           <div class="staff-list">
             <div v-for="request in pendingJoinRequests" :key="request.id" class="staff-card">
@@ -639,7 +652,10 @@ onMounted(() => {
 
               <div class="staff-actions">
                 <button
-                  @click="() => handleJoinRequest(request.id, true, request.userEmail, request.displayName)"
+                  @click="
+                    () =>
+                      handleJoinRequest(request.id, true, request.userEmail, request.displayName)
+                  "
                   class="action-btn approve-btn"
                 >
                   承認
@@ -689,71 +705,98 @@ onMounted(() => {
 
         <!-- 활성 스태프 -->
         <section class="staff-section active">
-        <h2>スタッフ ({{ activeStaff.length }})</h2>
-        <div v-if="activeStaff.length === 0" class="no-staff">
-          現在アクティブなスタッフはいません。
-        </div>
-        <div v-else class="staff-list">
-          <div
-            v-for="staff in activeStaff"
-            :key="staff.email"
-            class="staff-card"
-            :class="{ 'is-current-user': staff.email === currentUserEmail }"
-          >
-            <div class="staff-info">
-              <div class="staff-avatar-container">
-                <img
-                  v-if="staff.staffImageUrl || staff.userPhotoURL || (staff.email === currentUserEmail && currentUser?.photoURL)"
-                  :src="staff.staffImageUrl || staff.userPhotoURL || (staff.email === currentUserEmail ? currentUser?.photoURL : '')"
-                  :alt="staff.displayName || staff.userDisplayName || staff.email"
-                  class="staff-avatar"
-                />
-                <div v-else class="staff-avatar staff-avatar-default">
-                  👤
-                </div>
-                <div class="staff-role-badge">
-                  {{ staff.role === 'owner' ? '👑' : '⚙️' }}
-                </div>
-              </div>
-              <div class="staff-details">
-                <div class="staff-name">
-                  {{ staff.displayName || staff.userDisplayName || (staff.email === currentUserEmail ? currentUser?.displayName : null) || staff.email }}
-                  <span v-if="staff.email === currentUserEmail" class="you-badge"> (あなた) </span>
-                </div>
-                <div v-if="staff.displayName || staff.userDisplayName || (staff.email === currentUserEmail && currentUser?.displayName)" class="staff-email-small">{{ staff.email }}</div>
-                <div class="staff-meta-row">
-                  <div class="staff-meta">
-                    {{ getRoleLabel(staff.role) }}
+          <h2>スタッフ ({{ activeStaff.length }})</h2>
+          <div v-if="activeStaff.length === 0" class="no-staff">
+            現在アクティブなスタッフはいません。
+          </div>
+          <div v-else class="staff-list">
+            <div
+              v-for="staff in activeStaff"
+              :key="staff.email"
+              class="staff-card"
+              :class="{ 'is-current-user': staff.email === currentUserEmail }"
+            >
+              <div class="staff-info">
+                <div class="staff-avatar-container">
+                  <img
+                    v-if="
+                      staff.staffImageUrl ||
+                      staff.userPhotoURL ||
+                      (staff.email === currentUserEmail && currentUser?.photoURL)
+                    "
+                    :src="
+                      staff.staffImageUrl ||
+                      staff.userPhotoURL ||
+                      (staff.email === currentUserEmail ? currentUser?.photoURL : '')
+                    "
+                    :alt="staff.displayName || staff.userDisplayName || staff.email"
+                    class="staff-avatar"
+                  />
+                  <div v-else class="staff-avatar staff-avatar-default">👤</div>
+                  <div class="staff-role-badge">
+                    {{ staff.role === 'owner' ? '👑' : '⚙️' }}
                   </div>
-                  <div class="staff-actions-inline">
-                    <!-- 오너가 다른 스태프 제거 -->
-                    <button
-                      v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
-                      @click="() => handleRemoveStaff(staff.email)"
-                      class="remove-btn"
-                      title="スタッフを削除"
-                    >
-                      🗑️
-                    </button>
-                    <!-- 본인이 탈퇴 (오너는 다른 오너가 있을 때만) -->
-                    <button
-                      v-if="staff.email === currentUserEmail && (staff.role !== 'owner' || canOwnerLeave)"
-                      @click="() => handleLeaveStore()"
-                      class="leave-btn"
-                      title="退店"
-                    >
-                      🚪
-                    </button>
+                </div>
+                <div class="staff-details">
+                  <div class="staff-name">
+                    {{
+                      staff.displayName ||
+                      staff.userDisplayName ||
+                      (staff.email === currentUserEmail ? currentUser?.displayName : null) ||
+                      staff.email
+                    }}
+                    <span v-if="staff.email === currentUserEmail" class="you-badge">
+                      (あなた)
+                    </span>
+                  </div>
+                  <div
+                    v-if="
+                      staff.displayName ||
+                      staff.userDisplayName ||
+                      (staff.email === currentUserEmail && currentUser?.displayName)
+                    "
+                    class="staff-email-small"
+                  >
+                    {{ staff.email }}
+                  </div>
+                  <div class="staff-meta-row">
+                    <div class="staff-meta">
+                      {{ getRoleLabel(staff.role) }}
+                    </div>
+                    <div class="staff-actions-inline">
+                      <!-- 오너가 다른 스태프 제거 -->
+                      <button
+                        v-if="isOwner && staff.email !== currentUserEmail && staff.role !== 'owner'"
+                        @click="() => handleRemoveStaff(staff.email)"
+                        class="remove-btn"
+                        title="スタッフを削除"
+                      >
+                        🗑️
+                      </button>
+                      <!-- 본인이 탈퇴 (오너는 다른 오너가 있을 때만) -->
+                      <button
+                        v-if="
+                          staff.email === currentUserEmail &&
+                          (staff.role !== 'owner' || canOwnerLeave)
+                        "
+                        @click="() => handleLeaveStore()"
+                        class="leave-btn"
+                        title="退店"
+                      >
+                        🚪
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
         <!-- 권한 안내 -->
-        <div v-if="!isOwner" class="permission-notice">ℹ️ スタッフの招待はオーナーのみ可能です。</div>
+        <div v-if="!isOwner" class="permission-notice">
+          ℹ️ スタッフの招待はオーナーのみ可能です。
+        </div>
       </template>
     </div>
 
@@ -840,7 +883,9 @@ onMounted(() => {
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="cancelDisplayName" class="cancel-button">キャンセル</button>
+            <button type="button" @click="cancelDisplayName" class="cancel-button">
+              キャンセル
+            </button>
             <button type="submit" :disabled="isUpdatingDisplayName" class="submit-button">
               {{ isUpdatingDisplayName ? '更新中...' : '更新' }}
             </button>
@@ -850,7 +895,11 @@ onMounted(() => {
     </div>
 
     <!-- 招待承認時の表示名入力モダル -->
-    <div v-if="showInvitationAcceptModal" class="modal-overlay" @click="showInvitationAcceptModal = false">
+    <div
+      v-if="showInvitationAcceptModal"
+      class="modal-overlay"
+      @click="showInvitationAcceptModal = false"
+    >
       <div class="modal-content" @click.stop>
         <h2>招待を承認</h2>
 
@@ -863,13 +912,13 @@ onMounted(() => {
               placeholder="例：山田 太郎"
               autofocus
             />
-            <p class="form-hint">
-              店舗内で表示される名前です。後で変更できます。
-            </p>
+            <p class="form-hint">店舗内で表示される名前です。後で変更できます。</p>
           </div>
 
           <div class="modal-actions">
-            <button type="button" @click="showInvitationAcceptModal = false" class="cancel-button">キャンセル</button>
+            <button type="button" @click="showInvitationAcceptModal = false" class="cancel-button">
+              キャンセル
+            </button>
             <button type="submit" :disabled="isAcceptingInvitation" class="submit-button">
               {{ isAcceptingInvitation ? '承認中...' : '承認' }}
             </button>

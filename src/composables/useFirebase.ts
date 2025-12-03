@@ -9,6 +9,8 @@ import {
   getDoc,
   getDocs,
   Timestamp,
+  type Query,
+  type DocumentData,
 } from 'firebase/firestore'
 import { getFunctions, httpsCallable } from 'firebase/functions'
 import { getAuth } from 'firebase/auth'
@@ -66,10 +68,10 @@ export function useFirebase() {
    * 모든 매장 목록 가져오기
    */
   const getStores = async (status?: 'pending' | 'approved' | 'rejected'): Promise<Store[]> => {
-    let q = collection(db, 'stores')
+    let q: Query<DocumentData, DocumentData> = collection(db, 'stores')
 
     if (status) {
-      q = query(collection(db, 'stores'), where('status', '==', status)) as any
+      q = query(collection(db, 'stores'), where('status', '==', status))
     }
 
     const snapshot = await getDocs(q)
@@ -282,7 +284,7 @@ export function useFirebase() {
  * 시간 포맷 유틸리티
  */
 export function useTimeFormat() {
-  const formatTimestamp = (timestamp: any): string => {
+  const formatTimestamp = (timestamp: Timestamp | Date | number | null | undefined): string => {
     if (!timestamp) return ''
 
     const date = timestamp instanceof Timestamp ? timestamp.toDate() : new Date(timestamp)

@@ -6,8 +6,13 @@ import type { WaitingCustomer } from '../types'
 
 const route = useRoute()
 const router = useRouter()
-const { subscribeToWaitingList, callCustomer, cancelWaiting, completeEntry, registerManualCustomer } =
-  useFirebase()
+const {
+  subscribeToWaitingList,
+  callCustomer,
+  cancelWaiting,
+  completeEntry,
+  registerManualCustomer,
+} = useFirebase()
 const { formatTimestamp } = useTimeFormat()
 
 const storeId = ref(route.params.storeId as string)
@@ -75,9 +80,10 @@ const handleCallCustomer = async (customer: WaitingCustomer) => {
   try {
     await callCustomer(storeId.value, customer.id)
     // 성공 메시지는 표시하지 않음 (실시간으로 상태 업데이트됨)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('호출 실패:', err)
-    alert(err.message || '呼び出しに失敗しました。')
+    const message = err instanceof Error ? err.message : '呼び出しに失敗しました。'
+    alert(message)
   } finally {
     processingCustomerId.value = null
   }
@@ -95,9 +101,10 @@ const handleCompleteEntry = async (customer: WaitingCustomer) => {
 
   try {
     await completeEntry(storeId.value, customer.id)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('완료 처리 실패:', err)
-    alert(err.message || '完了処理に失敗しました。')
+    const message = err instanceof Error ? err.message : '完了処理に失敗しました。'
+    alert(message)
   } finally {
     processingCustomerId.value = null
   }
@@ -115,9 +122,10 @@ const handleCancelWaiting = async (customer: WaitingCustomer) => {
 
   try {
     await cancelWaiting(storeId.value, customer.id)
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('취소 실패:', err)
-    alert(err.message || 'キャンセルに失敗しました。')
+    const message = err instanceof Error ? err.message : 'キャンセルに失敗しました。'
+    alert(message)
   } finally {
     processingCustomerId.value = null
   }
@@ -182,9 +190,10 @@ const handleManualRegistration = async () => {
     })
     closeManualRegistrationModal()
     alert('お客様を登録しました。')
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('수동 등록 실패:', err)
-    alert(err.message || 'お客様の登録に失敗しました。')
+    const message = err instanceof Error ? err.message : 'お客様の登録に失敗しました。'
+    alert(message)
   } finally {
     isSubmittingManualRegistration.value = false
   }
@@ -427,7 +436,11 @@ onMounted(() => {
     </div>
 
     <!-- 수동 등록 모달 -->
-    <div v-if="showManualRegistrationModal" class="modal-overlay" @click="closeManualRegistrationModal">
+    <div
+      v-if="showManualRegistrationModal"
+      class="modal-overlay"
+      @click="closeManualRegistrationModal"
+    >
       <div class="modal-content" @click.stop>
         <h2>お客様を追加</h2>
         <form @submit.prevent="handleManualRegistration">

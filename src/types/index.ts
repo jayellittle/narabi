@@ -1,3 +1,5 @@
+import type { Timestamp } from 'firebase/firestore'
+
 export interface Store {
   id: string
   name: string
@@ -11,8 +13,8 @@ export interface Store {
   staffList: StaffMember[]
   qrCodeUrl?: string
   approvalRequestMessage?: string
-  createdAt: any
-  approvedAt?: any
+  createdAt: Timestamp | Date | { seconds: number; nanoseconds: number }
+  approvedAt?: Timestamp | Date | { seconds: number; nanoseconds: number }
 }
 
 export interface StaffMember {
@@ -20,8 +22,11 @@ export interface StaffMember {
   userId?: string
   role: 'owner' | 'staff'
   status: 'pending' | 'active' | 'rejected'
-  invitedAt: any
+  invitedAt: Timestamp | Date | { seconds: number; nanoseconds: number }
   displayName?: string
+  staffImageUrl?: string
+  userDisplayName?: string
+  userPhotoURL?: string
 }
 
 export interface WaitingCustomer {
@@ -34,10 +39,10 @@ export interface WaitingCustomer {
   isManualRegistration?: boolean // 수동 등록 여부
   status: 'waiting' | 'called' | 'cancelled' | 'completed'
   queueNumber: number
-  createdAt: any
-  calledAt?: any
-  cancelledAt?: any
-  completedAt?: any
+  createdAt: Timestamp | Date | { seconds: number; nanoseconds: number }
+  calledAt?: Timestamp | Date | { seconds: number; nanoseconds: number }
+  cancelledAt?: Timestamp | Date | { seconds: number; nanoseconds: number }
+  completedAt?: Timestamp | Date | { seconds: number; nanoseconds: number }
 }
 
 export interface StoreJoinRequest {
@@ -48,7 +53,7 @@ export interface StoreJoinRequest {
   displayName?: string
   message?: string
   status: 'pending' | 'approved' | 'rejected'
-  createdAt: any
+  createdAt: Timestamp | Date | { seconds: number; nanoseconds: number }
 }
 
 export interface EstimatedWaitTime {
