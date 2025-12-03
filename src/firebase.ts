@@ -24,10 +24,10 @@ if (import.meta.env.CI || process.env.NODE_ENV === 'test') {
   console.log('🧪 CI/Test 환경 감지됨: Firebase 연결을 차단하고 Mock 객체를 사용합니다.')
 
   // 빈 껍데기 객체 할당 (무한 로딩 방지)
-  auth = {} as any
-  db = {} as any
-  storage = {} as any
-  functions = {} as any
+  auth = {} as Auth
+  db = {} as Firestore
+  storage = {} as FirebaseStorage
+  functions = {} as Functions
 } else {
   // 🚀 실제 환경(개발/배포)일 때만 초기화 수행
   const app = initializeApp(firebaseConfig)
