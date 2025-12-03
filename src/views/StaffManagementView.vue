@@ -41,6 +41,7 @@ interface JoinRequest {
   message?: string
   status: 'pending' | 'approved' | 'rejected'
   createdAt: { seconds: number; nanoseconds: number } | Date
+  displayName?: string
 }
 
 const joinRequests = ref<JoinRequest[]>([])
@@ -646,7 +647,9 @@ onMounted(() => {
                   <div class="staff-meta" v-if="request.message">
                     メッセージ: {{ request.message }}
                   </div>
-                  <div class="staff-meta">送信: {{ formatTimestamp(request.createdAt) }}</div>
+                  <div class="staff-meta">
+                    送信: {{ formatTimestamp(request.createdAt as any) }}
+                  </div>
                 </div>
               </div>
 

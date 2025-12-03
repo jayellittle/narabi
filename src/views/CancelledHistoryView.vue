@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFirebase, useTimeFormat } from '../composables/useFirebase'
 import type { WaitingCustomer } from '../types'
+import { Timestamp } from 'firebase/firestore'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,13 +23,42 @@ const goBack = () => {
 }
 
 // 대기 시간 계산 (분 단위)
+// 대기 시간 계산 (분 단위)
 const calculateWaitingTime = (customer: WaitingCustomer): string => {
   if (!customer.createdAt || !customer.cancelledAt) return '-'
 
-  const createdDate =
-    customer.createdAt.toDate ? customer.createdAt.toDate() : new Date(customer.createdAt)
-  const cancelledDate =
-    customer.cancelledAt.toDate ? customer.cancelledAt.toDate() : new Date(customer.cancelledAt)
+  let createdDate: Date
+  if (customer.createdAt instanceof Timestamp) {
+    createdDate = customer.createdAt.toDate()
+  } else if (customer.createdAt instanceof Date) {
+    createdDate = customer.createdAt
+  } else if (
+    typeof customer.createdAt === 'object' &&
+    'seconds' in customer.createdAt &&
+    'nanoseconds' in customer.createdAt
+  ) {
+    createdDate = new Timestamp(customer.createdAt.seconds, customer.createdAt.nanoseconds).toDate()
+  } else {
+    createdDate = new Date(customer.createdAt)
+  }
+
+  let cancelledDate: Date
+  if (customer.cancelledAt instanceof Timestamp) {
+    cancelledDate = customer.cancelledAt.toDate()
+  } else if (customer.cancelledAt instanceof Date) {
+    cancelledDate = customer.cancelledAt
+  } else if (
+    typeof customer.cancelledAt === 'object' &&
+    'seconds' in customer.cancelledAt &&
+    'nanoseconds' in customer.cancelledAt
+  ) {
+    cancelledDate = new Timestamp(
+      customer.cancelledAt.seconds,
+      customer.cancelledAt.nanoseconds,
+    ).toDate()
+  } else {
+    cancelledDate = new Date(customer.cancelledAt)
+  }
 
   const diffMinutes = Math.floor((cancelledDate.getTime() - createdDate.getTime()) / 1000 / 60)
 
@@ -111,13 +141,11 @@ onMounted(() => {
             </div>
             <div class="customer-info-details">
               <p v-if="customer.partySize" class="info-text">人数: {{ customer.partySize }}名</p>
-              <p v-if="customer.phoneNumber" class="info-text">
-                電話: {{ customer.phoneNumber }}
-              </p>
+              <p v-if="customer.phoneNumber" class="info-text">電話: {{ customer.phoneNumber }}</p>
             </div>
             <div class="customer-time-status">
-              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
-              <p class="customer-time">取消: {{ formatTimestamp(customer.cancelledAt) }}</p>
+              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt as any) }}</p>
+              <p class="customer-time">取消: {{ formatTimestamp(customer.cancelledAt as any) }}</p>
               <p class="waiting-time">待機時間: {{ calculateWaitingTime(customer) }}</p>
             </div>
           </div>

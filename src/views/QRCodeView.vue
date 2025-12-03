@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+
 import QrcodeVue from 'qrcode.vue'
 import { useFirebase } from '../composables/useFirebase'
 import type { WaitingCustomer } from '../types'

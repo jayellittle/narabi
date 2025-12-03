@@ -368,9 +368,9 @@ onMounted(() => {
               </span>
             </div>
             <div class="customer-time-status">
-              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
+              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt as any) }}</p>
               <p v-if="customer.calledAt" class="customer-time">
-                呼出: {{ formatTimestamp(customer.calledAt) }}
+                呼出: {{ formatTimestamp(customer.calledAt as any) }}
               </p>
             </div>
           </div>

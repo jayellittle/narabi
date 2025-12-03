@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useFirebase, useTimeFormat } from '../composables/useFirebase'
 import type { WaitingCustomer } from '../types'
+import { Timestamp } from 'firebase/firestore'
 
 const route = useRoute()
 const router = useRouter()
@@ -22,13 +23,42 @@ const goBack = () => {
 }
 
 // 처리 시간 계산 (분 단위)
+// 처리 시간 계산 (분 단위)
 const calculateProcessingTime = (customer: WaitingCustomer): string => {
   if (!customer.createdAt || !customer.completedAt) return '-'
 
-  const createdDate =
-    customer.createdAt.toDate ? customer.createdAt.toDate() : new Date(customer.createdAt)
-  const completedDate =
-    customer.completedAt.toDate ? customer.completedAt.toDate() : new Date(customer.completedAt)
+  let createdDate: Date
+  if (customer.createdAt instanceof Timestamp) {
+    createdDate = customer.createdAt.toDate()
+  } else if (customer.createdAt instanceof Date) {
+    createdDate = customer.createdAt
+  } else if (
+    typeof customer.createdAt === 'object' &&
+    'seconds' in customer.createdAt &&
+    'nanoseconds' in customer.createdAt
+  ) {
+    createdDate = new Timestamp(customer.createdAt.seconds, customer.createdAt.nanoseconds).toDate()
+  } else {
+    createdDate = new Date(customer.createdAt)
+  }
+
+  let completedDate: Date
+  if (customer.completedAt instanceof Timestamp) {
+    completedDate = customer.completedAt.toDate()
+  } else if (customer.completedAt instanceof Date) {
+    completedDate = customer.completedAt
+  } else if (
+    typeof customer.completedAt === 'object' &&
+    'seconds' in customer.completedAt &&
+    'nanoseconds' in customer.completedAt
+  ) {
+    completedDate = new Timestamp(
+      customer.completedAt.seconds,
+      customer.completedAt.nanoseconds,
+    ).toDate()
+  } else {
+    completedDate = new Date(customer.completedAt)
+  }
 
   const diffMinutes = Math.floor((completedDate.getTime() - createdDate.getTime()) / 1000 / 60)
 
@@ -111,13 +141,11 @@ onMounted(() => {
             </div>
             <div class="customer-info-details">
               <p v-if="customer.partySize" class="info-text">人数: {{ customer.partySize }}名</p>
-              <p v-if="customer.phoneNumber" class="info-text">
-                電話: {{ customer.phoneNumber }}
-              </p>
+              <p v-if="customer.phoneNumber" class="info-text">電話: {{ customer.phoneNumber }}</p>
             </div>
             <div class="customer-time-status">
-              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt) }}</p>
-              <p class="customer-time">完了: {{ formatTimestamp(customer.completedAt) }}</p>
+              <p class="customer-time">登録: {{ formatTimestamp(customer.createdAt as any) }}</p>
+              <p class="customer-time">完了: {{ formatTimestamp(customer.completedAt as any) }}</p>
               <p class="processing-time">処理時間: {{ calculateProcessingTime(customer) }}</p>
             </div>
           </div>
