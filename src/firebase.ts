@@ -23,7 +23,7 @@ export const functions = getFunctions(app)
 export const storage = getStorage(app)
 
 // 🔥 Emulator 연결 (로컬 개발 시)
-if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+if (!import.meta.env.CI && location.hostname === 'localhost') {
   console.log('🔧 Firebase Emulator에 연결합니다...')
 
   // Auth Emulator
