@@ -30,6 +30,7 @@ coverage
 *.tsbuildinfo
 
 # Local Environment Variables
+.env
 .env.*
 
 # Firebase Cache File

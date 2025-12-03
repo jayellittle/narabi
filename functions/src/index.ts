@@ -68,9 +68,10 @@ export const registerWaitlist = functions
     const LINE_LOGIN_CHANNEL_SECRET = process.env.LINE_LOGIN_CHANNEL_SECRET
 
     const isEmulated = process.env.FUNCTIONS_EMULATOR === 'true'
+    const projectId = process.env.GCLOUD_PROJECT || 'narabi-a8765'
     const REDIRECT_URI = isEmulated
       ? `http://localhost:5173/wait`
-      : `https://narabi-a8765.web.app/wait`
+      : `https://${projectId}.web.app/wait`
 
     try {
       const body = querystring.stringify({
@@ -430,7 +431,10 @@ export const inviteStaff = functions
         await admin.auth().getUserByEmail(email)
       } catch (error: any) {
         if (error.code === 'auth/user-not-found') {
-          throw new functions.https.HttpsError('not-found', 'このメールアドレスは登録されていません。')
+          throw new functions.https.HttpsError(
+            'not-found',
+            'このメールアドレスは登録されていません。',
+          )
         }
         throw error
       }
@@ -672,7 +676,8 @@ export const generateStoreQR = functions.https.onCall(async (data, context) => {
 
     // QR 코드 URL 생성
     const isEmulated = process.env.FUNCTIONS_EMULATOR === 'true'
-    const baseUrl = isEmulated ? 'http://localhost:5173' : 'https://narabi-a8765.web.app'
+    const projectId = process.env.GCLOUD_PROJECT || 'narabi-a8765'
+    const baseUrl = isEmulated ? 'http://localhost:5173' : `https://${projectId}.web.app`
     const qrUrl = `${baseUrl}/wait?store=${storeId}`
 
     await db.collection('stores').doc(storeId).update({
@@ -853,14 +858,12 @@ export const registerManualCustomer = functions.https.onCall(async (data, contex
     const storeData = storeDoc.data() as StoreInfo
     const staffList = storeData.staffList || []
 
-    const staffEntry = staffList.find(
-      (s) => s.email === userEmail && s.status === 'active'
-    )
+    const staffEntry = staffList.find((s) => s.email === userEmail && s.status === 'active')
 
     if (!staffEntry) {
       throw new functions.https.HttpsError(
         'permission-denied',
-        'この店舗のスタッフではありません。'
+        'この店舗のスタッフではありません。',
       )
     }
 
@@ -958,13 +961,13 @@ export const removeStaffSelf = functions.https.onCall(async (data, context) => {
     // オーナーの場合、他にオーナーがいるか確認
     if (myStaffEntry.role === 'owner') {
       const otherOwners = staffList.filter(
-        (s) => s.role === 'owner' && s.status === 'active' && s.email !== userEmail
+        (s) => s.role === 'owner' && s.status === 'active' && s.email !== userEmail,
       )
 
       if (otherOwners.length === 0) {
         throw new functions.https.HttpsError(
           'failed-precondition',
-          '他のオーナーがいないため、退店できません。'
+          '他のオーナーがいないため、退店できません。',
         )
       }
     }
