@@ -13,21 +13,22 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-// 변수들을 먼저 선언합니다 (타입 호환성을 위해 any 사용)
+// 변수들을 먼저 선언합니다
 let auth: Auth
 let db: Firestore
 let storage: FirebaseStorage
 let functions: Functions
 
-// 🚨 여기가 핵심: CI 환경이거나 테스트 중이면 가짜 객체를 주입하고 끝냅니다.
+// 🚨 CI 환경이거나 테스트 중인지 확인
+// (any 에러 방지를 위해 unknown으로 2중 캐스팅을 사용합니다)
 if (import.meta.env.CI || process.env.NODE_ENV === 'test') {
   console.log('🧪 CI/Test 환경 감지됨: Firebase 연결을 차단하고 Mock 객체를 사용합니다.')
 
-  // 빈 껍데기 객체 할당 (무한 로딩 방지)
-  auth = {} as Auth
-  db = {} as Firestore
-  storage = {} as FirebaseStorage
-  functions = {} as Functions
+  // 빈 객체({})를 unknown으로 먼저 변환 후, 원하는 타입으로 강제 변환하면 에러가 나지 않습니다.
+  auth = {} as unknown as Auth
+  db = {} as unknown as Firestore
+  storage = {} as unknown as FirebaseStorage
+  functions = {} as unknown as Functions
 } else {
   // 🚀 실제 환경(개발/배포)일 때만 초기화 수행
   const app = initializeApp(firebaseConfig)
@@ -37,13 +38,17 @@ if (import.meta.env.CI || process.env.NODE_ENV === 'test') {
   storage = getStorage(app)
   functions = getFunctions(app)
 
-  // 로컬 에뮬레이터 연결
+  // 로컬 에뮬레이터 연결 (localhost일 때만)
   if (location.hostname === 'localhost') {
     console.log('🔧 Localhost detected. Connecting to Emulators...')
-    connectFirestoreEmulator(db, 'localhost', 8080)
-    connectAuthEmulator(auth, 'http://localhost:9099')
-    connectStorageEmulator(storage, 'localhost', 9199)
-    connectFunctionsEmulator(functions, 'localhost', 5001)
+    try {
+      connectFirestoreEmulator(db, 'localhost', 8080)
+      connectAuthEmulator(auth, 'http://localhost:9099')
+      connectStorageEmulator(storage, 'localhost', 9199)
+      connectFunctionsEmulator(functions, 'localhost', 5001)
+    } catch (e) {
+      console.warn('에뮬레이터 연결 중 경고(이미 연결됨 등):', e)
+    }
   }
 }
 
