@@ -21,7 +21,11 @@ let functions: Functions
 
 // 🚨 CI 환경이거나 테스트 중인지 확인
 // (any 에러 방지를 위해 unknown으로 2중 캐스팅을 사용합니다)
-if (import.meta.env.CI || process.env.NODE_ENV === 'test') {
+if (
+  import.meta.env.CI ||
+  process.env.NODE_ENV === 'test' ||
+  import.meta.env.VITE_IS_CI_ENV === 'true'
+) {
   console.log('🧪 CI/Test 환경 감지됨: Firebase 연결을 차단하고 Mock 객체를 사용합니다.')
 
   // 빈 객체({})를 unknown으로 먼저 변환 후, 원하는 타입으로 강제 변환하면 에러가 나지 않습니다.
