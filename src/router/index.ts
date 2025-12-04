@@ -1,5 +1,3 @@
-// src/router/index.ts
-
 import { createRouter, createWebHistory } from 'vue-router'
 import { getAuth } from 'firebase/auth'
 
@@ -19,6 +17,11 @@ const router = createRouter({
       path: '/wait',
       name: 'Wait',
       component: () => import('../views/WaitingView.vue'),
+    },
+    {
+      path: '/status/:storeId/:customerId',
+      name: 'CustomerStatus',
+      component: () => import('../views/CustomerStatusView.vue'),
     },
     {
       path: '/register-store',

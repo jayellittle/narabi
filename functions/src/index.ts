@@ -136,7 +136,7 @@ export const registerWaitlist = functions
 
       const queueNumber = currentWaiting.size + 1
 
-      await db.collection('stores').doc(storeId).collection('waitingList').add({
+      const docRef = await db.collection('stores').doc(storeId).collection('waitingList').add({
         lineUserId: lineProfile.userId,
         displayName: lineProfile.displayName,
         pictureUrl: lineProfile.pictureUrl,
@@ -152,7 +152,7 @@ export const registerWaitlist = functions
         queueNumber: queueNumber,
       })
 
-      return { success: true, queueNumber: queueNumber }
+      return { success: true, queueNumber: queueNumber, customerId: docRef.id }
     } catch (error: unknown) {
       if (error instanceof functions.https.HttpsError) {
         throw error

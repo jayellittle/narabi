@@ -38,6 +38,8 @@ type Status = 'initial' | 'loading' | 'success' | 'error'
 
 interface RegisterWaitlistResponse {
   success: boolean
+  customerId: string
+  queueNumber: number
 }
 
 const status = ref<Status>('initial')
@@ -73,6 +75,14 @@ const goBack = () => {
 }
 
 onMounted(async () => {
+  const storeIdFromQuery = route.query.store as string
+
+  const savedCustomerId = localStorage.getItem(`narabi_customer_${storeIdFromQuery}`)
+  if (savedCustomerId) {
+    router.replace(`/status/${storeIdFromQuery}/${savedCustomerId}`)
+    return
+  }
+
   const code = new URL(window.location.href).searchParams.get('code')
 
   // CASE 1: LINEから戻ってきた場合 (code有り・localStorageにstoreIdを保持中)
@@ -90,7 +100,9 @@ onMounted(async () => {
       const result = await registerWaitlist({ code: code, storeId: savedStoreId })
 
       if (result.data.success) {
-        status.value = 'success'
+        const customerId = result.data.customerId
+        localStorage.setItem(`narabi_customer_${savedStoreId}`, customerId)
+        router.replace(`/status/${savedStoreId}/${customerId}`)
       } else {
         throw new Error('Registration failed.')
       }
