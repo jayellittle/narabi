@@ -1,18 +1,30 @@
+/// <reference types="vitest" />
 import { fileURLToPath, URL } from 'node:url'
 
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import vueDevTools from 'vite-plugin-vue-devtools'
+export default defineConfig(async ({ mode }) => {
+  const plugins = [vue()]
 
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
-  resolve: {
-    alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+  // Skip vueDevTools in test mode to avoid ERR_REQUIRE_ESM errors
+  if (mode !== 'test') {
+    const { default: vueDevTools } = await import('vite-plugin-vue-devtools')
+    plugins.push(vueDevTools())
+  }
+
+  return {
+    plugins,
+    resolve: {
+      alias: {
+        '@': fileURLToPath(new URL('./src', import.meta.url)),
+      },
     },
-  },
+    test: {
+      environment: 'jsdom',
+      globals: true,
+      testTimeout: 10000,
+      hookTimeout: 10000,
+      teardownTimeout: 5000,
+    },
+  }
 })

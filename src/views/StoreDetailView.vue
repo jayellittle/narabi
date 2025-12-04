@@ -1,119 +1,550 @@
 <template>
-  <div>
-    <div v-if="store">
-      <h1>{{ store.name }}</h1>
-      <h2>管理画面</h2>
-
-      <div class="qrcode-section">
-        <h3>順番待ち登録用のQRコード</h3>
-        <qrcode-vue :value="waitingUrl" :size="250" level="H" />
+  <div class="store-detail-container">
+    <!-- 사이드바 (데스크톱 또는 모바일 메뉴 페이지에서만 표시) -->
+    <aside class="sidebar" :class="{ 'hide-on-mobile': !isMenuPage }">
+      <div class="sidebar-header">
+        <h2>🏪 NARABI</h2>
+        <button @click="goBack" class="back-btn">← 戻る</button>
       </div>
 
-      <div class="waitlist-section">
-        <h3>現在の順番待ちリスト</h3>
-        <ul>
-          <li v-for="customer in waitingList" :key="customer.id">
+      <div v-if="store" class="store-info-section">
+        <!-- 관리 메뉴 -->
+        <nav class="nav-menu">
+          <h3>管理メニュー</h3>
+          <template v-if="isCurrentUserPending">
+            <!-- pending 사용자는 스태프 관리만 접근 가능 -->
+            <router-link :to="`/store/${storeId}/staff`" class="nav-item" active-class="active">
+              <span class="nav-icon">⚙️</span>
+              招待承認
+            </router-link>
+            <div class="menu-notice">ℹ️ 招待を承認すると全てのメニューにアクセスできます</div>
+          </template>
+          <template v-else>
+            <!-- active 사용자는 전체 메뉴 접근 가능 -->
+            <router-link
+              :to="`/store/${storeId}`"
+              class="nav-item"
+              :class="{ active: isMenuPage }"
+              exact
+            >
+              <span class="nav-icon">🏠</span>
+              メニュー
+            </router-link>
+            <router-link :to="`/store/${storeId}/qr`" class="nav-item" active-class="active">
+              <span class="nav-icon">📱</span>
+              QRコード表示
+            </router-link>
+            <router-link :to="`/store/${storeId}/waiting`" class="nav-item" active-class="active">
+              <span class="nav-icon">👥</span>
+              順番待ちリスト
+            </router-link>
+            <router-link :to="`/store/${storeId}/staff`" class="nav-item" active-class="active">
+              <span class="nav-icon">⚙️</span>
+              スタッフ管理
+            </router-link>
+          </template>
+        </nav>
+      </div>
+
+      <div v-else class="loading">読み込み中...</div>
+    </aside>
+
+    <!-- 메인 컨텐츠 -->
+    <main class="main-content">
+      <!-- 모바일 헤더 -->
+      <div v-if="store" class="mobile-header">
+        <div class="mobile-header-top">
+          <button @click="isMenuPage ? goBack() : goToMenu()" class="mobile-back-btn-icon">
+            ⬅️
+          </button>
+          <div class="mobile-user-info">
             <img
-              :src="customer.pictureUrl"
-              width="30"
-              style="border-radius: 50%; vertical-align: middle; margin-right: 8px"
+              v-if="currentProfileImage && currentProfileImage !== '/default-avatar.png'"
+              :src="currentProfileImage"
+              alt="プロフィール画像"
+              class="mobile-user-avatar"
             />
-            {{ customer.displayName }} 様
-            <button @click="callCustomer(customer.id)">呼び出す</button>
-          </li>
-        </ul>
-        <p v-if="waitingList.length === 0">現在順番待ち中のお客様がいらっしゃいません。</p>
+            <div v-else class="mobile-user-avatar-placeholder">👤</div>
+            <span class="mobile-user-name">{{ currentDisplayName }}</span>
+          </div>
+        </div>
+        <div class="mobile-store-name">{{ store.name }}</div>
       </div>
-    </div>
-    <div v-else>
-      <p>店舗情報を呼び出し中です...</p>
-    </div>
+
+      <!-- PC 헤더 (store info card) - 메뉴 페이지에서만 표시 -->
+      <div v-if="store && isMenuPage" class="pc-store-header">
+        <div class="store-header-card">
+          <img
+            v-if="store.imageUrl"
+            :src="store.imageUrl"
+            alt="店舗画像"
+            class="store-header-image"
+          />
+          <div class="store-icon" v-else>🏪</div>
+          <div class="store-header-details">
+            <h3 class="store-header-name">{{ store.name }}</h3>
+            <p class="store-header-address">{{ store.address }}</p>
+          </div>
+        </div>
+      </div>
+
+      <router-view v-if="store" />
+      <div v-else class="loading-content">
+        <p>店舗情報を読み込み中...</p>
+      </div>
+    </main>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  getFirestore,
-  collection,
-  doc,
-  getDoc,
-  query,
-  where,
-  onSnapshot,
-  orderBy,
-} from 'firebase/firestore'
-import { getFunctions, httpsCallable } from 'firebase/functions'
-import QrcodeVue from 'qrcode.vue'
+import { getFirestore, doc, getDoc, type Timestamp } from 'firebase/firestore'
+import { getAuth } from 'firebase/auth'
 
-interface Customer {
+interface StaffMember {
+  email: string
+  userId?: string
+  role: 'owner' | 'staff'
+  status: 'pending' | 'active' | 'rejected'
+  invitedAt: Timestamp | Date | { seconds: number; nanoseconds: number }
+  staffImageUrl?: string
+  displayName?: string
+}
+
+interface Store {
   id: string
+  name: string
+  address: string
+  phoneNumber: string
+  googleMapsUrl?: string
+  imageUrl?: string
+  ownerId: string
+  staffList?: StaffMember[]
+  createdAt: Timestamp | Date | { seconds: number; nanoseconds: number }
+}
+
+interface UserProfile {
+  email: string
   displayName: string
-  pictureUrl: string
+  profileImageUrl: string
 }
 
 const db = getFirestore()
+const auth = getAuth()
 const route = useRoute()
 const router = useRouter()
 const storeId = route.params.storeId as string
 
-const store = ref<{ name: string } | null>(null)
-const waitingUrl = ref('')
-const waitingList = ref<Customer[]>([])
+const store = ref<Store | null>(null)
+const userProfile = ref<UserProfile | null>(null)
+
+// 現在のユーザー
+const currentUser = computed(() => auth.currentUser)
+
+// 現在のページがメニューページかどうか
+const isMenuPage = computed(() => {
+  return route.name === 'StoreManagementMenu'
+})
+
+// 現在のスタッフメンバー情報
+const currentStaffMember = computed(() => {
+  if (!store.value || !currentUser.value) return null
+  return store.value.staffList?.find((s) => s.email === currentUser.value?.email)
+})
+
+// プロフィール画像を取得 (優先順位: スタッフ画像 > ユーザー画像)
+const currentProfileImage = computed(() => {
+  if (currentStaffMember.value?.staffImageUrl) {
+    return currentStaffMember.value.staffImageUrl
+  }
+  if (userProfile.value?.profileImageUrl) {
+    return userProfile.value.profileImageUrl
+  }
+  return '/default-avatar.png'
+})
+
+// 表示名を取得 (優先順位: スタッフ表示名 > ユーザー表示名 > メール)
+const currentDisplayName = computed(() => {
+  if (currentStaffMember.value?.displayName) {
+    return currentStaffMember.value.displayName
+  }
+  if (userProfile.value?.displayName) {
+    return userProfile.value.displayName
+  }
+  return currentUser.value?.email || ''
+})
+
+// 現在のユーザーがpending状態かどうか
+const isCurrentUserPending = computed(() => {
+  return currentStaffMember.value?.status === 'pending'
+})
+
+// ユーザープロフィールをロード
+const loadUserProfile = async () => {
+  if (!currentUser.value) return
+
+  try {
+    const userDoc = await getDoc(doc(db, 'users', currentUser.value.uid))
+    if (userDoc.exists()) {
+      userProfile.value = userDoc.data() as UserProfile
+    }
+  } catch (error) {
+    console.error('ユーザープロフィール読み込み失敗:', error)
+  }
+}
 
 onMounted(async () => {
   if (storeId) {
-    // 1. 가게 기본 정보(이름 등) 불러오기
-    const storeDocRef = doc(db, 'stores', storeId)
-    const storeDoc = await getDoc(storeDocRef)
-    if (storeDoc.exists()) {
-      store.value = { name: storeDoc.data().name }
-    } else {
-      console.error('Store not found!')
+    try {
+      const storeDocRef = doc(db, 'stores', storeId)
+      const storeDoc = await getDoc(storeDocRef)
+
+      if (storeDoc.exists()) {
+        store.value = {
+          id: storeDoc.id,
+          ...storeDoc.data(),
+        } as Store
+
+        // ユーザープロフィールもロード
+        await loadUserProfile()
+      } else {
+        console.error('Store not found!')
+        alert('店舗情報が見つかりませんでした。')
+        router.push('/dashboard')
+      }
+    } catch (error) {
+      console.error('Error loading store:', error)
+      alert('店舗情報の読み込みに失敗しました。')
       router.push('/dashboard')
     }
-
-    // 2. QR코드에 담을 URL 생성 (실제 배포 주소로 변경 필요)
-    waitingUrl.value = `https://narabi-a8765.web.app/wait/${storeId}`
-
-    // 3. 이 가게의 대기 목록을 실시간으로 감시 시작
-    setupWaitingListListener(storeId)
   }
 })
 
-// 고객 호출 함수
-const callCustomer = async (customerId: string) => {
-  if (!storeId) return
+// pending ユーザーがアクセスできないページへの遷移を防ぐ
+watch(
+  () => [route.path, isCurrentUserPending.value],
+  ([currentPath, isPending]) => {
+    if (isPending && store.value) {
+      const restrictedPaths = [
+        `/store/${storeId}`,
+        `/store/${storeId}/qr`,
+        `/store/${storeId}/waiting`,
+      ]
 
-  try {
-    const functions = getFunctions()
-    const sendCallNotification = httpsCallable(functions, 'sendCallNotification')
-    await sendCallNotification({
-      storeId: storeId,
-      customerId: customerId,
-    })
-    alert('呼び出し通知を送信しました。')
-  } catch (error) {
-    console.error('通知の送信に失敗しました：', error)
-    alert('通知の送信に失敗しました。')
-  }
+      if (restrictedPaths.includes(currentPath as string)) {
+        alert('招待を承認すると全てのメニューにアクセスできます。')
+        router.replace(`/store/${storeId}/staff`)
+      }
+    }
+  },
+  { immediate: true },
+)
+
+const goBack = () => {
+  router.push('/dashboard')
 }
 
-// 실시간 대기 목록 감시 설정 함수
-const setupWaitingListListener = (currentStoreId: string) => {
-  const q = query(
-    collection(db, `stores/${currentStoreId}/waitingList`),
-    where('status', '==', 'waiting'),
-    orderBy('createdAt', 'asc'),
-  )
-
-  onSnapshot(q, (querySnapshot) => {
-    const list: Customer[] = []
-    querySnapshot.forEach((doc) => {
-      list.push({ id: doc.id, ...doc.data() } as Customer)
-    })
-    waitingList.value = list
-  })
+const goToMenu = () => {
+  // pending ユーザーは店舗一覧に戻る
+  if (isCurrentUserPending.value) {
+    router.push('/dashboard')
+    return
+  }
+  router.push(`/store/${storeId}`)
 }
 </script>
+
+<style scoped>
+.store-detail-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f5f5;
+}
+
+/* 사이드바 */
+.sidebar {
+  width: 300px;
+  background: white;
+  border-right: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  color: #4caf50;
+  font-size: 1.5rem;
+}
+
+.back-btn {
+  padding: 0.5rem 1rem;
+  background-color: #666;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.3s;
+}
+
+.back-btn:hover {
+  background-color: #555;
+}
+
+.loading {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+}
+
+/* 점포 정보 섹션 */
+.store-info-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* PC 헤더 (store info card) */
+.pc-store-header {
+  display: none;
+}
+
+.store-header-card {
+  margin-bottom: 1.5rem;
+  padding: 1.5rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  color: white;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.store-header-image {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.store-icon {
+  font-size: 3rem;
+  background: rgba(255, 255, 255, 0.2);
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.store-header-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.store-header-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.store-header-address {
+  margin: 0;
+  font-size: 1rem;
+  opacity: 0.9;
+}
+
+/* PC 헤더を常に非表示 */
+.pc-store-header {
+  display: none;
+}
+
+/* 네비게이션 메뉴 */
+.nav-menu {
+  padding: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.nav-menu h3 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  color: #333;
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.3s;
+  margin-bottom: 0.5rem;
+}
+
+.nav-item:hover {
+  background-color: #f5f5f5;
+}
+
+.nav-item.active {
+  background-color: #4caf50;
+  color: white;
+}
+
+.nav-icon {
+  font-size: 1.2rem;
+}
+
+.menu-notice {
+  padding: 0.75rem;
+  margin: 0.5rem 0;
+  background-color: #fff3e0;
+  color: #f57c00;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* 메인 컨텐츠 */
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.loading-content {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+/* モバイルヘッダー */
+.mobile-header {
+  display: none;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0.75rem 0.5rem;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-header-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-back-btn-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #333;
+  flex-shrink: 0;
+}
+
+.mobile-back-btn-icon:hover {
+  background: #e0e0e0;
+}
+
+.mobile-back-btn-icon:active {
+  background: #d0d0d0;
+}
+
+.mobile-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.mobile-user-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid #e0e0e0;
+}
+
+.mobile-user-avatar-placeholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.mobile-user-name {
+  font-weight: 500;
+  color: #333;
+  font-size: 0.95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-store-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1rem;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* モバイルファースト: すべてのデバイスで同じUIを表示 */
+.store-detail-container {
+  flex-direction: column;
+}
+
+/* サイドバーを常に非表示 */
+.sidebar {
+  display: none;
+}
+
+.main-content {
+  padding: 0;
+  width: 100%;
+}
+
+/* モバイルヘッダーを常に表示 */
+.mobile-header {
+  display: flex;
+}
+</style>
