@@ -126,15 +126,21 @@ export const registerWaitlist = functions
         )
       }
 
-      // 현재 대기 번호 계산
-      const currentWaiting = await db
+      const lastCustomerQuery = await db
         .collection('stores')
         .doc(storeId)
         .collection('waitingList')
-        .where('status', '==', 'waiting')
+        .orderBy('queueNumber', 'desc') // 번호 내림차순 정렬
+        .limit(1) // 가장 큰 것 1개만 가져옴
         .get()
 
-      const queueNumber = currentWaiting.size + 1
+      let queueNumber = 1
+      if (!lastCustomerQuery.empty) {
+        const lastCustomer = lastCustomerQuery.docs[0].data()
+        // 안전하게 number 타입인지 확인
+        const lastNum = typeof lastCustomer.queueNumber === 'number' ? lastCustomer.queueNumber : 0
+        queueNumber = lastNum + 1
+      }
 
       const docRef = await db.collection('stores').doc(storeId).collection('waitingList').add({
         lineUserId: lineProfile.userId,
@@ -872,18 +878,13 @@ export const registerManualCustomer = functions.https.onCall(async (data, contex
     // 대기열 컬렉션 참조
     const waitingListRef = db.collection('stores').doc(storeId).collection('waitingList')
 
-    // 현재 대기 중인 모든 고객을 가져와서 최대 queue number 확인
-    const allCustomersSnapshot = await waitingListRef.get()
+    const lastCustomerQuery = await waitingListRef.orderBy('queueNumber', 'desc').limit(1).get()
 
     let nextQueueNumber = 1
-    if (!allCustomersSnapshot.empty) {
-      const queueNumbers = allCustomersSnapshot.docs
-        .map((doc) => doc.data().queueNumber || 0)
-        .filter((num) => typeof num === 'number')
-
-      if (queueNumbers.length > 0) {
-        nextQueueNumber = Math.max(...queueNumbers) + 1
-      }
+    if (!lastCustomerQuery.empty) {
+      const lastCustomer = lastCustomerQuery.docs[0].data()
+      const lastNum = typeof lastCustomer.queueNumber === 'number' ? lastCustomer.queueNumber : 0
+      nextQueueNumber = lastNum + 1
     }
 
     // 고유 ID 생성

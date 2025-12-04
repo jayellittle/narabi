@@ -4,7 +4,7 @@
     <div v-else-if="error" class="error">{{ error }}</div>
 
     <div v-else-if="myData" class="status-content">
-      <h2 class="store-name">Narabi Store</h2>
+      <h2 class="store-name">{{ store ? store.name : '読み込み中...' }}</h2>
 
       <div :class="['status-card', myData.status]">
         <div class="status-header">
@@ -18,11 +18,11 @@
             <span class="value">{{ peopleAhead }}</span>
             <span class="unit">組</span>
           </div>
-          <div class="info-row highlight">
-            <span class="label">予想待ち時間</span>
-            <span class="value">約 {{ estimatedWaitTime }}</span>
+          <!-- <div class="info-row highlight">
+            <span class="label">予想待ち時間 約 </span>
+            <span class="value">{{ estimatedWaitTime }}</span>
             <span class="unit">分</span>
-          </div>
+          </div> -->
         </div>
 
         <div v-else-if="myData.status === 'called'" class="called-info">
@@ -39,6 +39,12 @@
         <button @click="refreshPage" class="refresh-button">🔄 更新する</button>
       </div>
     </div>
+
+    <div v-else class="not-found">
+      <p>お客様の情報が見つかりませんでした。</p>
+      <p class="sub-text">URLが正しいか確認してください。</p>
+      <router-link to="/wait">トップに戻る</router-link>
+    </div>
   </div>
 </template>
 
@@ -46,22 +52,23 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useFirebase } from '../composables/useFirebase'
-import type { WaitingCustomer } from '../types'
+import type { WaitingCustomer, Store } from '../types'
 
 const route = useRoute()
-const { subscribeToWaitingList } = useFirebase()
+const { subscribeToWaitingList, getStore } = useFirebase()
 
-const storeId = route.params.storeId as string
-const customerId = route.params.customerId as string
+const storeId = ref(route.params.storeId as string)
+const customerId = ref(route.params.customerId as string)
 
 const waitingList = ref<WaitingCustomer[]>([])
+const store = ref<Store | null>(null)
 const loading = ref(true)
 const error = ref('')
 let unsubscribe: (() => void) | null = null
 
 // 내 데이터 찾기
 const myData = computed(() => {
-  return waitingList.value.find((c) => c.id === customerId)
+  return waitingList.value.find((c) => c.id === customerId.value)
 })
 
 // 내 앞의 대기 팀 수 계산
@@ -75,9 +82,9 @@ const peopleAhead = computed(() => {
 })
 
 // 예상 대기 시간 (단순 계산: 1팀당 15분 가정, 필요 시 로직 고도화)
-const estimatedWaitTime = computed(() => {
-  return peopleAhead.value * 15
-})
+// const estimatedWaitTime = computed(() => {
+//   return peopleAhead.value * 15
+// })
 
 const getStatusText = (status: string) => {
   switch (status) {
@@ -98,15 +105,24 @@ const refreshPage = () => {
   window.location.reload()
 }
 
-onMounted(() => {
-  if (!storeId || !customerId) {
+onMounted(async () => {
+  if (!storeId.value || !customerId.value) {
     error.value = '無効なアクセスです。'
     loading.value = false
     return
   }
 
+  try {
+    const storeData = await getStore(storeId.value)
+    if (storeData) {
+      store.value = storeData
+    }
+  } catch (e) {
+    console.error('Store info load failed', e)
+  }
+
   // 전체 대기열을 구독하여 내 순서와 앞사람 수를 계산
-  unsubscribe = subscribeToWaitingList(storeId, (customers) => {
+  unsubscribe = subscribeToWaitingList(storeId.value, (customers) => {
     waitingList.value = customers
 
     // 내 데이터가 목록에 없으면 (완료/취소되어 리스트에서 사라진 경우 등) 처리

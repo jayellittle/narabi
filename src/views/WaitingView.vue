@@ -24,7 +24,7 @@
         LINEで順番待ち
       </button>
       <!-- <button @click="loginWithPhoneNumber"> -->
-      <button>LINEをお持ちではないですか？</button>
+      <!-- <button>LINEをお持ちではないですか？</button> -->
     </div>
   </div>
 </template>
